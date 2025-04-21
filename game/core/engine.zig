@@ -1,17 +1,27 @@
 const std = @import("std");
 
+const GameStateManager = @import("../systems/gameStateSystem.zig").GameStateManager;
+
 pub const Engine = struct {
     arena: std.heap.ArenaAllocator,
     isRunning: bool,
     targetFPS: u32,
 
+    stateManager: GameStateManager,
+
     pub fn init(allocator: std.mem.Allocator) Engine {
         std.debug.print("[ENGINE] intializing...\n", .{});
-        return Engine{
+        var engine = Engine{
             .arena = std.heap.ArenaAllocator.init(allocator),
             .isRunning = true,
             .targetFPS = 60, // FPS
+
+            .stateManager = undefined,
         };
+
+        engine.stateManager = GameStateManager.init(&engine);
+
+        return engine;
     }
     pub fn deinit(self: *Engine) void {
         std.debug.print("[ENGINE] de-intializing...\n", .{});
@@ -39,13 +49,14 @@ pub const Engine = struct {
                 std.debug.print("sleepDuration {d}\n", .{sleepDuration});
                 std.Thread.sleep(@intCast(sleepDuration * std.time.ms_per_s));
             }
+
+            if (frameCount >= 3) break;
         }
     }
 
     fn update(self: *Engine) !void {
-        _ = self;
         std.debug.print("[ENGINE] - update\n", .{});
-        // do some update stuff (right now just wait for a q)
+        self.stateManager.update(10.0);
     }
 
     fn render(self: *Engine) !void {
