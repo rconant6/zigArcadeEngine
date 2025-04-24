@@ -5,46 +5,65 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const raylib_dep = b.dependency("raylib_zig", .{
-        .target = target,
+    //
+    // const raylib_dep = b.dependency("raylib_zig", .{
+    //     .target = target,
+    //     .optimize = optimize,
+    // });
+    //
+    // const raylib = raylib_dep.module("raylib");
+    // const raylib_artifact = raylib_dep.artifact("raylib");
+    //
+
+    const exe = b.addExecutable(.{
+        .name = "zasteroids",
+        .root_source_file = b.path("game/main.zig"),
         .optimize = optimize,
+        .target = target,
     });
 
-    const raylib = raylib_dep.module("raylib");
-    // const raylibMath = raylib_dep.module("raylib-math");
-    const raylib_artifact = raylib_dep.artifact("raylib");
-
-    // //web exports are completely separate
-    // if (target.query.os_tag == .emscripten) {
-    //     const exe_lib = try rlz.emcc.compileForEmscripten(b, "zasteroids", "src/main.zig", target, optimize);
+    // MACOS keyboard stuff
+    exe.addLibraryPath(b.path("MacOS/.build/arm64-apple-macosx/release"));
+    exe.addIncludePath(b.path("MacOS/Sources/CkbBridge/include"));
+    exe.linkSystemLibrary("KeyboardBridge");
+    exe.linkFramework("Cocoa");
+    // END MACOS keyboard stuff
     //
-    //     exe_lib.linkLibrary(raylib_artifact);
-    //     exe_lib.root_module.addImport("raylib", raylib);
-    //     exe_lib.linkLibrary(raylibMath_artifact);
-    //     exe_lib.root_module.addImport("raylib-math", raylibMath);
+    // exe.linkLibrary(raylib_artifact);
+    // exe.root_module.addImport("raylib", raylib);
     //
-    //     // Note that raylib itself is not actually added to the exe_lib output file, so it also needs to be linked with emscripten.
-    //     const link_step = try rlz.emcc.linkWithEmscripten(b, &[_]*std.Build.Step.Compile{ exe_lib, raylib_artifact, raylibMath_artifact });
-    //     //this lets your program access files like "resources/my-image.png":
-    // link_step.addArg("--embed-file");
-    // link_step.addArg("resources/");
-    //
-    //     b.getInstallStep().dependOn(&link_step.step);
-    //     const run_step = try rlz.emcc.emscriptenRunStep(b);
-    //     run_step.step.dependOn(&link_step.step);
-    //     const run_option = b.step("run", "Run zasteroids");
-    //     run_option.dependOn(&run_step.step);
-    //     return;
-    // }
-    //
-    const exe = b.addExecutable(.{ .name = "zasteroids", .root_source_file = b.path("game/main.zig"), .optimize = optimize, .target = target });
-
-    exe.linkLibrary(raylib_artifact);
-    exe.root_module.addImport("raylib", raylib);
+    const keyboard_module = b.createModule(.{
+        .root_source_file = b.path("game/core/bridge.zig"),
+    });
+    exe.root_module.addImport("keyboard", keyboard_module);
 
     const run_cmd = b.addRunArtifact(exe);
     const run_step = b.step("run", "Run zasteroids");
     run_step.dependOn(&run_cmd.step);
+
+    // Add a keyboard test executable
+    const keyboard_test = b.addExecutable(.{
+        .name = "keyboard_test",
+        .root_source_file = b.path("game/keyboardTest.zig"),
+        .optimize = optimize,
+        .target = target,
+    });
+
+    // Add the same paths and libraries
+    keyboard_test.addLibraryPath(b.path("MacOS/.build/arm64-apple-macosx/release"));
+    keyboard_test.addIncludePath(b.path("MacOS/Sources/CkbBridge/include"));
+    keyboard_test.linkSystemLibrary("KeyboardBridge");
+    keyboard_test.linkFramework("Cocoa");
+    // keyboard_test.linkLibrary(raylib_artifact);
+    // keyboard_test.root_module.addImport("raylib", raylib);
+    keyboard_test.root_module.addImport("keyboard", keyboard_module);
+
+    // Add a run step for the test
+    const test_cmd = b.addRunArtifact(keyboard_test);
+    const test_step = b.step("test-keyboard", "Run keyboard test");
+    test_step.dependOn(&test_cmd.step);
+
+    b.installArtifact(keyboard_test);
 
     b.installArtifact(exe);
 }
