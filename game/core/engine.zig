@@ -30,7 +30,7 @@ pub const Engine = struct {
 
     pub fn run(self: *Engine) !void {
         std.debug.print("[ENGINE] running\n", .{});
-        const frameDuration = std.time.ms_per_s / self.targetFPS; // 1_000_000 PS / 60 FPS
+        // const frameDuration = std.time.ms_per_s / self.targetFPS; // 1_000_000 PS / 60 FPS
         var frameStart: i64 = 0;
         var frameEnd: i64 = 0;
         var sleepDuration: i64 = 0;
@@ -43,14 +43,15 @@ pub const Engine = struct {
             try self.render();
             frameEnd = std.time.microTimestamp();
             elapsed = frameEnd - frameStart;
-            sleepDuration = frameDuration - elapsed;
+            // sleepDuration = frameDuration - elapsed;
+            sleepDuration = 1_000_000;
 
             if (sleepDuration > 0) {
                 std.debug.print("sleepDuration {d}\n", .{sleepDuration});
                 std.Thread.sleep(@intCast(sleepDuration * std.time.ms_per_s));
             }
 
-            if (frameCount >= 3) break;
+            if (frameCount >= 20) break;
         }
     }
 

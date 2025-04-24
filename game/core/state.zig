@@ -1,5 +1,8 @@
 const std = @import("std");
 
+const GameStateContext = @import("../systems/gameStateSystem.zig").GameStateContext;
+const InputComponent = @import("../systems/inputSystem.zig").InputComponent;
+
 pub const MenuState = struct {
     // game gets setup and waits for game start
     // add the 4 required functions plus whatever else is needed
@@ -11,9 +14,10 @@ pub const MenuState = struct {
         // do what needs to be done
     }
 
-    pub fn exit(self: *MenuState) void {
+    pub fn exit(self: *MenuState, ctx: GameStateContext) void {
         std.debug.print("[MENUSTATE] - exit\n", .{});
         _ = self;
+        _ = ctx;
         // do what needs to be done
     }
 
@@ -39,9 +43,10 @@ pub const PlayingState = struct {
         // do what needs to be done
     }
 
-    pub fn exit(self: *PlayingState) void {
+    pub fn exit(self: *PlayingState, ctx: GameStateContext) void {
         std.debug.print("[PLAYINGSTATE] - exit\n", .{});
         _ = self;
+        _ = ctx;
         // do what needs to be done
     }
 
@@ -67,9 +72,10 @@ pub const PausedState = struct {
         // do what needs to be done
     }
 
-    pub fn exit(self: *PausedState) void {
+    pub fn exit(self: *PausedState, ctx: GameStateContext) void {
         std.debug.print("[PAUSEDSTATE] - exit\n", .{});
         _ = self;
+        _ = ctx;
         // do what needs to be done
     }
 
@@ -95,9 +101,10 @@ pub const GameOverState = struct {
         // do what needs to be done
     }
 
-    pub fn exit(self: *GameOverState) void {
+    pub fn exit(self: *GameOverState, ctx: GameStateContext) void {
         std.debug.print("[GAMEOVERSTATE] - exit\n", .{});
         _ = self;
+        _ = ctx;
         // do what needs to be done
     }
 
@@ -114,10 +121,6 @@ pub const GameOverState = struct {
         // do what needs to be done
     }
 };
-
-const GameStateContext = struct {
-    // hold what needs to be passed to start a stage
-};
 pub const GameState = union(enum) {
     MenuState: MenuState,
     PlayingState: PlayingState,
@@ -130,9 +133,9 @@ pub const GameState = union(enum) {
         }
     }
 
-    pub fn exit(self: *GameState) void {
+    pub fn exit(self: *GameState, ctx: GameStateContext) void {
         switch (self.*) {
-            inline else => |*s| s.exit(),
+            inline else => |*s| s.exit(ctx),
         }
     }
 
@@ -146,9 +149,4 @@ pub const GameState = union(enum) {
             inline else => |*s| s.handleInput(input),
         }
     }
-};
-
-// TODO: this needs to be moved to a real place (just for compiling reasons)
-const InputComponent = struct {
-    // this is just a placeholder (not where it needs to be for compiling reasons)
 };
