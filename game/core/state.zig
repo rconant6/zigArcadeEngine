@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const GameStateContext = @import("../systems/gameStateSystem.zig").GameStateContext;
+const GameStateContext = @import("../managers/gameStateManager.zig").GameStateContext;
 const InputComponent = @import("../systems/inputSystem.zig").InputComponent;
 
 pub const MenuState = struct {

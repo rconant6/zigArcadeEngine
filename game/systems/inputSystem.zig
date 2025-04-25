@@ -9,22 +9,6 @@ const InputType = enum {
     GamepadAxis,
 };
 
-pub const InputComponent = struct {
-    keyStates: std.AutoHashMap(u8, InputState),
-    currentTime: u64,
-
-    pub fn init(allocator: *std.mem.Allocator) !InputComponent {
-        return InputComponent{
-            .keyStates = std.AutoHashMap(u8, InputState).init(allocator),
-            .currentTime = 0,
-        };
-    }
-
-    pub fn deinit(self: *InputComponent) void {
-        self.keyStates.deinit();
-    }
-};
-
 pub const InputState = struct {
     isPressed: bool,
     wasPressed: bool,
@@ -39,7 +23,23 @@ pub const InputState = struct {
     }
 };
 
-const InputEvent = struct {
+pub const InputComponent = struct {
+    keyStates: std.AutoHashMap(u8, InputState),
+    currentTime: u64,
+
+    pub fn init(allocator: *std.mem.Allocator) InputComponent {
+        return InputComponent{
+            .keyStates = std.AutoHashMap(u8, InputState).init(allocator.*),
+            .currentTime = 0,
+        };
+    }
+
+    pub fn deinit(self: *InputComponent) void {
+        self.keyStates.deinit();
+    }
+};
+
+pub const InputEvent = struct {
     time: u64,
 
     data: union(enum) {
@@ -54,11 +54,11 @@ const InputEvent = struct {
 pub const InputSystem = struct {
     eventQueue: std.fifo.LinearFifo(InputEvent, .{ .Static = 16 }),
     lastUpdateTime: u64,
-    allocator: std.mem.Allocator,
+    allocator: *std.mem.Allocator,
 
-    pub fn init(allocator: *std.mem.Allocator) !InputSystem {
+    pub fn init(allocator: *std.mem.Allocator) InputSystem {
         return InputSystem{
-            .eventQueue = std.fifo.LinearFifo(InputEvent, .{ .Static = 16 }).init(allocator),
+            .eventQueue = std.fifo.LinearFifo(InputEvent, .{ .Static = 16 }).init(),
             .lastUpdateTime = 0,
             .allocator = allocator,
         };
@@ -69,10 +69,12 @@ pub const InputSystem = struct {
     }
 
     pub fn addEvent(self: *InputSystem, event: InputEvent) !void {
-        try self.eventQueue.append(event);
+        try self.eventQueue.writeItem(event);
     }
 
     pub fn update(self: *InputSystem, components: *std.ArrayList(InputComponent), curTime: u64) !void {
+        std.debug.print("[INPUTSYSETM] - update\n", .{});
+
         for (components.items) |*component| {
             // saving old state
             var iter = component.keyStates.valueIterator();
@@ -84,8 +86,9 @@ pub const InputSystem = struct {
         const eventCount = self.eventQueue.count;
         var i: usize = 0;
         while (i < eventCount) : (i += 1) {
-            const event = self.eventQueue.readItem() catch break;
+            const event = self.eventQueue.readItem() orelse break;
 
+            std.debug.print("[INPUTSYSTEM] - update   (component update on event)\n", .{});
             for (components.items) |*component| {
                 switch (event.data) {
                     .key => |keyData| {
@@ -109,14 +112,4 @@ pub const InputSystem = struct {
 
         self.lastUpdateTime = curTime;
     }
-};
-
-const KeyCodes = enum(u8) {
-    P = 0x19, // Play/Pause
-    A = 0x1E, // Rotate Counter-clockwise
-    S = 0x1F, // Reverse (maybe mini nose thrusters)
-    D = 0x20, // Rotate Clockwise
-    W = 0x11, // Thrust Forward
-    Enter = 0x1C, // Start Game
-    Space = 0x39, // Shoot
 };

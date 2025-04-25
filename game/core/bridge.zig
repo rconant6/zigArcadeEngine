@@ -4,6 +4,7 @@ const c = @cImport({
     @cInclude("/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/CkbBridge/include/kbBridge.h");
 });
 
+// MARK: Keyboard Bridging
 pub const KeyEvent = struct {
     keyCode: u8,
     isPressed: bool,
@@ -22,7 +23,9 @@ pub const KeyEvent = struct {
 pub const Keyboard = struct {
     // Initialize the keyboard system
     pub fn init() !void {
+        std.debug.print("[KEYBOARD] - init\n", .{});
         if (c.kb_startKeyboardMonitoring() == 0) {
+            std.debug.print("    !!!![KEYBOARD] - init failed\n", .{});
             return error.KeyboardMonitoringFailed;
         }
     }
@@ -34,6 +37,7 @@ pub const Keyboard = struct {
 
     // Poll for the next keyboard event
     pub fn pollEvent() ?KeyEvent {
+        std.debug.print("[KEYBOARD] - pollEvent\n", .{});
         var c_event: c.kbKeyEvent = undefined;
         if (c.kb_pollKeyboardEvent(&c_event) != 0) {
             return KeyEvent.fromC(c_event);
@@ -41,8 +45,8 @@ pub const Keyboard = struct {
         return null;
     }
 
-    // Check if a key is currently pressed
-    pub fn isKeyPressed(key_code: u8) bool {
-        return c.kb_isKeyPressed(key_code) != 0;
-    }
+    // // Check if a key is currently pressed
+    // pub fn isKeyPressed(key_code: u8) bool {
+    //     return c.kb_isKeyPressed(key_code) != 0;
+    // }
 };

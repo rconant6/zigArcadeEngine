@@ -1,6 +1,13 @@
 const std = @import("std");
 
-const GameStateManager = @import("../systems/gameStateSystem.zig").GameStateManager;
+const GameStateManager = @import("../managers/gameStateManager.zig").GameStateManager;
+const InputManager = @import("../managers/inputManager.zig").InputManager;
+
+const InputSystem = @import("../systems/inputSystem.zig").InputSystem;
+
+// TODO: remove this is debug code only
+const InputComponent = @import("../systems/inputSystem.zig").InputComponent;
+// END DEBUG CODE
 
 pub const Engine = struct {
     arena: std.heap.ArenaAllocator,
@@ -8,18 +15,35 @@ pub const Engine = struct {
     targetFPS: u32,
 
     stateManager: GameStateManager,
+    inputManager: InputManager,
 
-    pub fn init(allocator: std.mem.Allocator) Engine {
+    inputSystem: InputSystem,
+
+    inputComponents: std.ArrayList(InputComponent),
+
+    pub fn init(allocator: *std.mem.Allocator) !Engine {
         std.debug.print("[ENGINE] intializing...\n", .{});
         var engine = Engine{
-            .arena = std.heap.ArenaAllocator.init(allocator),
+            .arena = std.heap.ArenaAllocator.init(allocator.*),
             .isRunning = true,
             .targetFPS = 60, // FPS
 
             .stateManager = undefined,
+            .inputManager = undefined,
+            .inputSystem = InputSystem.init(allocator),
+
+            // TODO: remove this is debug code only
+            .inputComponents = std.ArrayList(InputComponent).init(allocator.*),
+            // END DEBUG CODE
+
         };
 
         engine.stateManager = GameStateManager.init(&engine);
+        engine.inputManager = try InputManager.init(allocator, &engine.inputSystem);
+
+        // TODO: remove debug code
+        engine.inputComponents.append(InputComponent.init(allocator)) catch {};
+        engine.inputComponents.append(InputComponent.init(allocator)) catch {};
 
         return engine;
     }
@@ -39,7 +63,7 @@ pub const Engine = struct {
         while (self.isRunning) : (frameCount += 1) {
             std.debug.print("[ENGINE] frameCount: {d}\n", .{frameCount});
             frameStart = std.time.microTimestamp();
-            try self.update();
+            try self.update(@intCast(frameStart));
             try self.render();
             frameEnd = std.time.microTimestamp();
             elapsed = frameEnd - frameStart;
@@ -51,12 +75,17 @@ pub const Engine = struct {
                 std.Thread.sleep(@intCast(sleepDuration * std.time.ms_per_s));
             }
 
-            if (frameCount >= 20) break;
+            if (frameCount >= 10) break;
         }
     }
 
-    fn update(self: *Engine) !void {
+    fn update(self: *Engine, frameStart: u64) !void {
         std.debug.print("[ENGINE] - update\n", .{});
+        // Input updates
+        try self.inputManager.update();
+        self.inputSystem.update(&self.inputComponents, frameStart) catch {
+            std.debug.print("whoops\n", .{});
+        };
         self.stateManager.update(10.0);
     }
 
