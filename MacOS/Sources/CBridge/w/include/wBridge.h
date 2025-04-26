@@ -29,9 +29,6 @@ wbBool wb_shouldWindowClose(wbWindowID id);
 // Process application events
 void wb_processEvents(void);
 
-// Make the window visible
-unsigned short wb_makeApplicationVisible();
-
 #ifdef __cplusplus
 }
 #endif

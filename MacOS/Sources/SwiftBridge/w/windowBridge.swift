@@ -7,6 +7,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+class KeyHandlingView: NSView {
+    override var acceptsFirstResponder: Bool { return true }
+    
+    override func keyDown(with event: NSEvent) {
+        // Instead of calling super, which would trigger the system beep,
+        // just capture the event for your keyboard monitoring system
+        // No need to call super.keyDown(with:)
+    }
+    
+    override func keyUp(with event: NSEvent) {
+        // Similarly, capture without passing to super
+        // No need to call super.keyUp(with:)
+    }
+}
+
 @MainActor
 public final class WindowManager {
     static var shared = WindowManager()
@@ -26,7 +41,7 @@ public final class WindowManager {
         let height = CGFloat(config.height)
         let rect = NSRect(x: 0, y: 0, width: width, height: height)
 
-        let styleMask: NSWindow.StyleMask = [.titled, .closable, .resizable]
+        let styleMask: NSWindow.StyleMask = [.titled, .closable]
         let window = NSWindow(
             contentRect: rect,
             styleMask: styleMask,
@@ -38,18 +53,24 @@ public final class WindowManager {
         window.isReleasedWhenClosed = false
         window.backgroundColor = NSColor.systemBlue  // Make it visibly blue for testing
     
-        // Create a content view for the window - this is often needed
-        let contentView = NSView(frame: rect)
-        contentView.wantsLayer = true
-        contentView.layer?.backgroundColor = NSColor.systemRed.cgColor  // Red for visibility
-        window.contentView = contentView
     
+        // Then in your createWindow function, replace the content view with:
+        let contentView = KeyHandlingView(frame: rect)
+        contentView.wantsLayer = true
+        contentView.layer?.backgroundColor = NSColor.systemRed.cgColor
+        window.contentView = contentView
+
+
+        // Make it the first responder
+        window.makeFirstResponder(contentView)
+
         // Position window in center of screen
         window.center()
     
         // Ensure window is visible and key (active)
         window.makeKeyAndOrderFront(nil)
         window.orderFrontRegardless()  // This forces it to the front even if app isn't active
+        window.preventsApplicationTerminationWhenModal = false
         
         print("[MACOS-WIN] - Window created, ID: \(windowID)")
     
@@ -187,44 +208,6 @@ public func wb_shouldWindowClose(_ windowID: UInt32) -> UInt8 {
         }
         
         return shouldClose ? 1 : 0
-    }
-}
-
-@MainActor
-@_cdecl("wb_makeApplicationVisible")
-public func wb_makeApplicationVisible() -> UInt8 {
-    if Thread.isMainThread {
-        NSApplication.shared.activate(ignoringOtherApps: true)
-        
-        // Force all windows to front
-        for window in WindowManager.shared.windows.values {
-            window.orderFrontRegardless()
-        }
-        
-        return 1
-    } else {
-        let semaphore = DispatchSemaphore(value: 0)
-        var success: UInt8 = 0
-        
-        DispatchQueue.main.async {
-            NSApplication.shared.activate(ignoringOtherApps: true)
-            
-            // Force all windows to front
-            for window in WindowManager.shared.windows.values {
-                window.orderFrontRegardless()
-            }
-            
-            success = 1
-            semaphore.signal()
-        }
-        
-        // Process main runloop for a moment
-        let runLoopMode = RunLoop.Mode.default
-        let timeout = Date(timeIntervalSinceNow: 0.1)
-        RunLoop.main.run(mode: runLoopMode, before: timeout)
-        
-        _ = semaphore.wait(timeout: .now() + 1.0)
-        return success
     }
 }
 
