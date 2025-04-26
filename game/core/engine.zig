@@ -9,6 +9,9 @@ const InputSystem = @import("../systems/inputSystem.zig").InputSystem;
 const InputComponent = @import("../systems/inputSystem.zig").InputComponent;
 // END DEBUG CODE
 
+const WINDOWWIDTH: usize = 1200;
+const WINDOWHEIGHT: usize = 900;
+
 pub const Engine = struct {
     arena: std.heap.ArenaAllocator,
     isRunning: bool,

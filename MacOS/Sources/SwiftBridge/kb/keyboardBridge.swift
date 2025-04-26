@@ -28,30 +28,6 @@ public final class KeyboardMonitor {
         eventQueue.append(keyEvent)
         print("[MACOS] - Queue size after adding: \(eventQueue.count)")
     }
-    // func processKeyEvent(_ event: NSEvent) {
-    //     let keyEvent = kbKeyEvent(
-    //         code: UInt8(event.keyCode),
-    //         isPressed: event.type == .keyDown ? 1 : 0,
-    //         timestamp: UInt64(event.timestamp * 1000) // Convert to milliseconds
-    //     )
-    //     queueLock.lock()
-    //     defer { queueLock.unlock() }
-    //
-    //     // Update pressed keys set
-    //     if event.type == .keyDown {
-    //         pressedKeys.insert(UInt8(event.keyCode))
-    //     } else if event.type == .keyUp {
-    //         pressedKeys.remove(UInt8(event.keyCode))
-    //     }
-    //
-    //     // Add event to queue
-    //     eventQueue.append(keyEvent)
-    //
-    //     // Keep queue from growing too large
-    //     if eventQueue.count > 16 { // to match the fifo size in game
-    //         eventQueue.removeFirst()
-    //     }
-    // }
 
     func isKeyPressed(_ keyCode: UInt8) -> Bool {
         queueLock.lock()
@@ -91,7 +67,6 @@ public final class KeyboardMonitor {
     print("[MACOS] - start monitor")
     // Already running
     if globalMonitor != nil {
-        print("[MACOS] - monitor already running")
         return true
     }
     
@@ -147,37 +122,14 @@ public func kb_stopKeyboardMonitoring() {
 @MainActor
 @_cdecl("kb_pollKeyboardEvent")
 public func kb_pollKeyboardEvent(_ outEvent: UnsafeMutablePointer<kbKeyEvent>) -> UInt8 {
-    print("[MACOS] - before shared.pollEvent")
     let result = KeyboardMonitor.shared.pollEvent()
 
-    print("[MACOS] - after shared.pollEvent: \(result)")
     if result.1, let event = result.0 {
         outEvent.pointee = event
-    print("[MACOS] - return 1")
         return 1
     }
-    print("[MACOS] - return 0")
     return 0
 }
-
-// @available(macOS 15.0, *)
-// @_cdecl("kb_pollKeyboardEvent")
-// public func kb_pollKeyboardEvent(_ outEvent: UnsafeMutablePointer<kbKeyEvent>) -> UInt8 {
-//     var result: (kbKeyEvent?, Bool) = (nil, false)
-//     let semaphore = DispatchSemaphore(value: 0)
-//
-//     DispatchQueue.main.async {
-//         result = KeyboardMonitor.shared.pollEvent()
-//         semaphore.signal()
-//     }
-//
-//     semaphore.wait()
-//     if result.1, let event = result.0 {
-//         outEvent.pointee = event
-//         return 1
-//     }
-//     return 0
-// }
 
 @available(macOS 15.0, *)
 @_cdecl("kb_isKeyPressed")

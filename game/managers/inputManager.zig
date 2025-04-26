@@ -53,11 +53,6 @@ pub const InputManager = struct {
     inputSystem: *InputSystem,
 
     pub fn init(allocator: *std.mem.Allocator, system: *InputSystem) !InputManager {
-        // Initialize keyboard system
-        Keyboard.init() catch {
-            return error.NoKeyboardInput;
-        };
-
         return InputManager{
             .allocator = allocator,
             .inputSystem = system,
