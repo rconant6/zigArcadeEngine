@@ -1,29 +1,86 @@
 const std = @import("std");
-const bridge = @import("core/bridge.zig");
+const bge = @import("bridge.zig");
+const gsm = @import("gameStateManager.zig");
+const gss = @import("gameStates.zig");
 
-const Engine = @import("core/engine.zig").Engine;
-const GameConfig = @import("core/engine.zig").GameConfig;
+const KeyCodes = bge.GameKeyCodes;
+
+const TARGET_FPS: f32 = 60.0;
+const TARGET_FRAME_TIME_NS: i64 = @intFromFloat((1.0 / TARGET_FPS) * std.time.ns_per_s);
+const F32_NS_PER_S: f32 = @floatFromInt(std.time.ns_per_s);
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    var allocator = gpa.allocator();
+    // MARK: External stuff that feeds the game
+    // Initialize the application
+    const app = bge.c.wb_initApplication();
+    if (app == 0) {
+        std.debug.print("Failed to initialize application\n", .{});
+        return error.ApplicationInitFailed;
+    }
+    // Create a window
+    var window = try bge.Window.create(.{
+        .width = 800,
+        .height = 600,
+        .title = "ZASTEROIDS",
+    });
+    defer window.destroy();
+    // Initialize keyboard
+    var keyboard = try bge.Keyboard.init();
+    defer keyboard.deinit();
 
-    std.debug.print("[MAIN] starting up\n", .{});
-    const config = GameConfig{
-        .windowTitle = "ZASTEROIDS",
-        .windowWidth = 1900,
-        .windowHeight = 1200,
-    };
+    // MARK: Internal stuff that runs the game
+    var stateManager = gsm.GameStateManager.init(); // place holder for the engine
 
-    var engine: Engine = Engine.init(&allocator, config) catch |err| {
-        std.debug.print("[MAIN] unable to initialize engine: {any}\n", .{err});
-        std.process.exit(65);
-    };
-    defer engine.deinit();
-    engine.run() catch |err| {
-        std.debug.print("[MAIN] engine catostrophic error: {any}\n", .{err});
-    };
+    // Main loop
+    var running = true;
+    var currentTime: i64 = std.time.microTimestamp();
+    var frameEndTime: i64 = currentTime;
+    var frameDuration: i64 = 0;
+    var sleepTime: i64 = 0;
+    var elapsed: f32 = 0.0;
+    var dt: f32 = 0.0;
 
-    std.debug.print("[MAIN] tearing down\n", .{});
+    while (running) {
+        currentTime = std.time.microTimestamp();
+        elapsed = @floatFromInt(currentTime - frameEndTime);
+        dt = elapsed / F32_NS_PER_S;
+        // Process window events
+        window.processEvents();
+
+        stateManager.update(dt);
+
+        // Check window close
+        if (window.shouldClose()) {
+            running = false;
+            continue;
+        }
+
+        // Check for keyboard input
+        while (keyboard.pollEvent()) |keyEvent| {
+            std.debug.print(
+                "[MAIN] - Key event: code={}, pressed={}\n",
+                .{ keyEvent.keyCode, keyEvent.isPressed },
+            );
+
+            switch (keyEvent.keyCode) {
+                .Esc => {
+                    running = false;
+                },
+                else => {},
+            }
+        }
+
+        frameEndTime = std.time.microTimestamp();
+        frameDuration = frameEndTime - currentTime;
+
+        sleepTime = TARGET_FRAME_TIME_NS - frameDuration;
+        if (sleepTime > 0) {
+            std.debug.print("Sleeptime: {d}\n", .{sleepTime});
+            std.Thread.sleep(@intCast(sleepTime));
+        } else {
+            std.debug.print("Missed frametime by: {d}", .{sleepTime});
+        }
+    }
+
+    std.debug.print("Application shutting down\n", .{});
 }

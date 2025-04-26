@@ -48,15 +48,80 @@ pub const Window = struct {
 };
 
 // MARK: Keyboard Bridging
+pub const GameKeyCode = enum(u8) {
+    A = 0,
+    W = 1,
+    S = 2,
+    D = 3,
+
+    Left = 4,
+    Right = 5,
+    Up = 6,
+    Down = 7,
+
+    P = 8,
+    Enter = 9,
+    Space = 10,
+    Esc = 11,
+
+    Unused = 255,
+};
+
+fn mapToGameKeyCode(osKeyCode: u8) GameKeyCode {
+    if (comptime std.Target.Os.Tag.macos == .macos) {
+        // Default mapping for MacOS
+        return switch (osKeyCode) {
+            0x00 => .A,
+            0x0D => .W,
+            0x01 => .S,
+            0x02 => .D,
+            0x7B => .Left,
+            0x7C => .Right,
+            0x7E => .Up,
+            0x7D => .Down,
+            0x23 => .P,
+            0x24 => .Enter,
+            0x31 => .Space,
+            0x35 => .Esc,
+            else => .Unused,
+        };
+    } else {
+        // Default mapping for other platforms (PC standard)
+        std.debug.print("here for some reason\n", .{});
+        return switch (osKeyCode) {
+            // WASD keys
+            0x04 => .A,
+            0x1A => .W,
+            0x16 => .S,
+            0x07 => .D,
+
+            // Arrow keys
+            0x4B => .Left, // Left arrow on PC
+            0x4D => .Right, // Right arrow on PC
+            0x48 => .Up, // Up arrow on PC
+            0x50 => .Down, // Down arrow on PC
+
+            // Action keys
+            0x13 => .P,
+            0x28 => .Enter,
+            0x2C => .Space,
+            0x29 => .Esc,
+
+            else => .Unused,
+        };
+    }
+}
+
 pub const KeyEvent = struct {
-    keyCode: u8,
+    keyCode: GameKeyCode,
     isPressed: bool,
     timestamp: u64,
 
     // Convert from C struct
     pub fn fromC(c_event: c.kbKeyEvent) KeyEvent {
+        const keyCode = mapToGameKeyCode(c_event.code);
         return KeyEvent{
-            .keyCode = c_event.code,
+            .keyCode = keyCode,
             .isPressed = c_event.isPressed != 0,
             .timestamp = c_event.timestamp,
         };
