@@ -1,7 +1,8 @@
 const std = @import("std");
+const bridge = @import("../core/bridge.zig");
 
-const Keyboard = @import("../core/bridge.zig").Keyboard;
-const KeyEvent = @import("../core/bridge.zig").KeyEvent;
+const Keyboard = bridge.Keyboard;
+const KeyEvent = bridge.KeyEvent;
 const InputSystem = @import("../systems/inputSystem.zig").InputSystem;
 const InputEvent = @import("../systems/inputSystem.zig").InputEvent;
 
@@ -51,17 +52,18 @@ pub const ActionKeyMap = struct {
 pub const InputManager = struct {
     allocator: *std.mem.Allocator,
     inputSystem: *InputSystem,
+    keyboard: Keyboard,
 
     pub fn init(allocator: *std.mem.Allocator, system: *InputSystem) !InputManager {
         return InputManager{
             .allocator = allocator,
             .inputSystem = system,
+            .keyboard = try Keyboard.init(),
         };
     }
 
     pub fn deinit(self: *InputManager) void {
-        _ = self;
-        Keyboard.deinit();
+        self.keyboard.deinit();
     }
 
     pub fn update(self: *InputManager) !void {
@@ -69,7 +71,7 @@ pub const InputManager = struct {
         var iteration_count: u32 = 0;
         const MAX_ITERATIONS: u32 = 1000; // Adjust as needed
         // Poll keyboard for new events
-        while (Keyboard.pollEvent()) |keyEvent| {
+        while (self.keyboard.pollEvent()) |keyEvent| {
             std.debug.print(
                 "   ----[INPUTMANAGER] - Got keyboard event: code={}, pressed={}\n",
                 .{ keyEvent.keyCode, keyEvent.isPressed },

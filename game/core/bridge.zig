@@ -64,18 +64,22 @@ pub const KeyEvent = struct {
 };
 
 pub const Keyboard = struct {
-    pub fn init() !void {
+    pub fn init() !Keyboard {
         std.debug.print("[KEYBOARD] - init\n", .{});
         if (c.kb_startKeyboardMonitoring() == 0) {
             return error.KeyboardMonitoringFailed;
         }
+        return Keyboard{};
     }
 
-    pub fn deinit() void {
+    pub fn deinit(self: *Keyboard) void {
+        std.debug.print("[KEYBOARD] - deinit\n", .{});
+        _ = self;
         c.kb_stopKeyboardMonitoring();
     }
 
-    pub fn pollEvent() ?KeyEvent {
+    pub fn pollEvent(self: *Keyboard) ?KeyEvent {
+        _ = self;
         var c_event: c.kbKeyEvent = undefined;
         if (c.kb_pollKeyboardEvent(&c_event) != 0) {
             return KeyEvent.fromC(c_event);

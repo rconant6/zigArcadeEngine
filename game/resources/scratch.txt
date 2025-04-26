@@ -121,3 +121,4 @@ Add color and blending
 Integrate with your ECS architecture
 
 By building everything from scratch, you'll understand exactly how every pixel gets to the screen, which will make you a much stronger graphics programmer overall. This foundation will also make using higher-level libraries easier later, as you'll understand what they're doing under the hood.
+

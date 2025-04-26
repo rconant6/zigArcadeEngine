@@ -37,6 +37,9 @@ pub const GameStateManager = struct {
             .current = gss.GameState{ .PlayingState = gss.PlayingState{} },
         };
     }
+    pub fn deinit(self: *GameStateManager) void {
+        _ = self;
+    }
 
     pub fn update(self: *GameStateManager, dt: f32) void {
         std.debug.print("[GAMESTATEMANAGER] - update\n", .{});
