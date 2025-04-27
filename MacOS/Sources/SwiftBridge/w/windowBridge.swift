@@ -2,9 +2,7 @@ import Cocoa
 import CWindowBridge
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        print("[MACOS-WIN] - Application did finish launching")
-    }
+    func applicationDidFinishLaunching(_ notification: Notification) {}
 }
 
 class KeyHandlingView: NSView {
@@ -33,7 +31,6 @@ public final class WindowManager {
     private init() {}
 
     func createWindow(config: wbWindowConfig) -> UInt32 {
-        print("[MACOS-WIN] - Creating window, width: \(config.width), height: \(config.height)")
         let windowID = nextWindowID
         nextWindowID += 1
 
@@ -72,8 +69,6 @@ public final class WindowManager {
         window.orderFrontRegardless()  // This forces it to the front even if app isn't active
         window.preventsApplicationTerminationWhenModal = false
         
-        print("[MACOS-WIN] - Window created, ID: \(windowID)")
-    
         // Force application to foreground
         NSApplication.shared.activate(ignoringOtherApps: true)
     
@@ -103,8 +98,6 @@ public final class WindowManager {
 @MainActor
 @_cdecl("wb_initApplication")
 public func wb_initApplication() -> UInt8 {
-    print("[MACOS-WIN] - Starting init")
-        
     if Thread.isMainThread {
         let app = NSApplication.shared
         app.setActivationPolicy(.regular)

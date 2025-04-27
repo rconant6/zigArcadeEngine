@@ -13,7 +13,7 @@ public final class KeyboardMonitor {
     private init() {}
     
     func processKeyEvent(_ event: NSEvent) {
-        print("[MACOS] - Processing event: keyCode=\(event.keyCode), type=\(event.type)")
+        // print("[MACOS-KB] - Processing event: keyCode=\(event.keyCode), type=\(event.type)")
     
         let keyEvent = kbKeyEvent(
          code: UInt8(event.keyCode),
@@ -24,9 +24,9 @@ public final class KeyboardMonitor {
         queueLock.lock()
         defer { queueLock.unlock() }
     
-        print("[MACOS] - Adding event to queue, current size: \(eventQueue.count)")
+        // print("[MACOS-KB] - Adding event to queue, current size: \(eventQueue.count)")
         eventQueue.append(keyEvent)
-        print("[MACOS] - Queue size after adding: \(eventQueue.count)")
+        // print("[MACOS-KB] - Queue size after adding: \(eventQueue.count)")
     }
 
     func isKeyPressed(_ keyCode: UInt8) -> Bool {
@@ -64,7 +64,7 @@ public final class KeyboardMonitor {
     }
 
     func startMonitoring() -> Bool {
-    print("[MACOS] - start monitor")
+    // print("[MACOS-KB] - start monitor")
     // Already running
     if globalMonitor != nil {
         return true
@@ -75,7 +75,7 @@ public final class KeyboardMonitor {
     
     // Set up the local monitor (events from your app)
     let localMonitor = NSEvent.addLocalMonitorForEvents(matching: eventMask) { [weak self] event in
-        print("[MACOS] - Local event captured: keyCode=\(event.keyCode)")
+        // print("[MACOS-KB] - Local event captured: keyCode=\(event.keyCode)")
         self?.processKeyEvent(event)
         return event
     }
@@ -83,7 +83,7 @@ public final class KeyboardMonitor {
     // Store the local monitor in the globalMonitor property
     globalMonitor = localMonitor
     
-    print("[MACOS] - monitor initialized: \(globalMonitor != nil)")
+    print("[MACOS-KB] - monitor initialized: \(globalMonitor != nil)")
     return globalMonitor != nil
 }
 }
@@ -91,13 +91,12 @@ public final class KeyboardMonitor {
 @MainActor
 @_cdecl("kb_startKeyboardMonitoring")
 public func kb_startKeyboardMonitoring() -> UInt8 {
-    print("[MACOS] - kb_startKeyboardMonitoring called")
     if Thread.isMainThread {
-        print("[MACOS] - on main thread, calling directly")
+        print("[MACOS-KB] - on main thread, calling directly")
         let success = KeyboardMonitor.shared.startMonitoring()
         return success ? 1 : 0
     } else {
-        print("[MACOS] - not on main thread, dispatching")
+        // print("[MACOS-KB] - not on main thread, dispatching")
         var success = false
         let semaphore = DispatchSemaphore(value: 0)
         
