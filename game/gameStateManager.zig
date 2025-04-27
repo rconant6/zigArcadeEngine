@@ -19,7 +19,7 @@ pub const GameStateManager = struct {
     // other things needed
     pub fn init() GameStateManager {
         return GameStateManager{
-            .current = gss.GameState{ .PlayingState = gss.PlayingState{} },
+            .current = gss.GameState{ .MenuState = gss.MenuState{} },
         };
     }
     pub fn deinit(self: *GameStateManager) void {
@@ -27,14 +27,16 @@ pub const GameStateManager = struct {
     }
 
     pub fn processKeyEvent(self: *GameStateManager, event: KeyEvent) void {
+        var transition: ?StateTransitions = null;
         if (event.isPressed) {
             if (event.keyCode == .Esc) {
                 // Transition to the MenuState
             } else {
-                const transition = self.current.handleInput(event); // let the state do it
+                transition = self.current.handleInput(event); // let the state do it
                 std.debug.print("[GSMANAGER] - Need to transtion to: {any}\n", .{transition});
             }
         }
+        if (transition) |t| self.changeState(t);
     }
 
     pub fn update(self: *GameStateManager, dt: f32) void {
@@ -52,32 +54,39 @@ pub const GameStateManager = struct {
             .PauseToPlay => {
                 std.debug.print("[GSMANAGER] - PauseToPlay\n", .{});
                 // turn on everything paused again
+                // this probably just stores the playstate and restores it when it leaves?
+                newGameState = GameState{ .PlayingState = PlayingState{} };
             },
             .PlayToPause => {
                 std.debug.print("[GSMANAGER] - PlayToPause\n", .{});
+                newGameState = GameState{ .PausedState = PausedState{} };
                 // turn off all the game systems
             },
             .PauseToMenu => {
                 std.debug.print("[GSMANAGER] - PauseToMenu\n", .{});
+                newGameState = GameState{ .MenuState = MenuState{} };
                 // kill the old gamestate
             },
             .PlayToMenu => {
                 std.debug.print("[GSMANAGER] - PlayToMenu\n", .{});
+                newGameState = GameState{ .MenuState = MenuState{} };
                 // kill the old game state
             },
             .PlayToGameOver => {
                 std.debug.print("[GSMANAGER] - PauseToGameOver\n", .{});
+                newGameState = GameState{ .GameOverState = GameOverState{} };
                 // kill the systems
                 // remember some state for stats?
             },
             .GameOverToMenu => {
                 std.debug.print("[GSMANAGER] - GameOverToMenu\n", .{});
+                newGameState = GameState{ .MenuState = MenuState{} };
                 // kill the old game state and reset anew
             },
         }
 
-        var ctx: GameStateContext = GameStateContext{};
-        self.current.exit(&ctx);
+        const ctx: GameStateContext = GameStateContext{};
+        self.current.exit(ctx);
         self.current = newGameState;
         self.current.enter(ctx);
     }
