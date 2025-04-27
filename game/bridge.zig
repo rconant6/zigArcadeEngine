@@ -38,6 +38,7 @@ pub const Window = struct {
     }
 
     pub fn destroy(self: *Window) void {
+        std.debug.print("[WINDOW] - destroy\n", .{});
         c.wb_destroyWindow(self.id);
         self.id = 0;
     }
@@ -63,6 +64,7 @@ pub const GameKeyCode = enum(u8) {
     Enter = 9,
     Space = 10,
     Esc = 11,
+    GameOver = 12, // placeholder to manually send when met?
 
     Unused = 255,
 };
@@ -151,4 +153,22 @@ pub const Keyboard = struct {
         }
         return null;
     }
+};
+
+// MARK: GameState bridging
+pub const GameStateContext = struct {
+    // hold what needs to be passed to start a stage
+    // this probably collects alot of optional stuff
+    // that each GameState will copy/set in its enter function
+    // exit can take a pointer to update it
+};
+
+pub const StateTransitions = enum {
+    MenuToPlay,
+    PauseToPlay,
+    PauseToMenu,
+    PlayToMenu,
+    PlayToPause,
+    PlayToGameOver,
+    GameOverToMenu,
 };

@@ -3,7 +3,7 @@ const bge = @import("bridge.zig");
 const gsm = @import("gameStateManager.zig");
 const gss = @import("gameStates.zig");
 
-const KeyCodes = bge.GameKeyCodes;
+const KeyCodes = bge.GameKeyCode;
 
 const TARGET_FPS: f32 = 60.0;
 const TARGET_FRAME_TIME_NS: i64 = @intFromFloat((1.0 / TARGET_FPS) * std.time.ns_per_s);
@@ -62,11 +62,10 @@ pub fn main() !void {
                 .{ keyEvent.keyCode, keyEvent.isPressed },
             );
 
-            switch (keyEvent.keyCode) {
-                .Esc => {
-                    running = false;
-                },
-                else => {},
+            stateManager.processKeyEvent(keyEvent);
+
+            if (keyEvent.keyCode == .Esc) {
+                running = false;
             }
         }
 
@@ -75,7 +74,6 @@ pub fn main() !void {
 
         sleepTime = TARGET_FRAME_TIME_NS - frameDuration;
         if (sleepTime > 0) {
-            std.debug.print("Sleeptime: {d}\n", .{sleepTime});
             std.Thread.sleep(@intCast(sleepTime));
         } else {
             std.debug.print("Missed frametime by: {d}", .{sleepTime});
