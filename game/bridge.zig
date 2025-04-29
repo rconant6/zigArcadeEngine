@@ -4,6 +4,8 @@ pub const c = @cImport({
     @cInclude("/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/CBridge/w/include/wBridge.h");
 });
 
+const Renderer = @import("renderer.zig");
+
 // MARK: Window Bridging
 pub const WindowConfig = struct {
     width: f32,
@@ -45,6 +47,16 @@ pub const Window = struct {
 
     pub fn shouldClose(self: Window) bool {
         return c.wb_shouldWindowClose(self.id) != 0;
+    }
+
+    // link data from the renderer
+    pub fn updateWindowPixels(self: *Window, colors: []const Renderer.Color, width: usize, height: usize) void {
+        c.wb_updateWindowPixels(
+            self.id,
+            @ptrCast(colors.ptr),
+            @intCast(width),
+            @intCast(height),
+        );
     }
 };
 

@@ -3,12 +3,21 @@
 
 typedef unsigned char wbBool;
 typedef unsigned int wbWindowID;
+typedef unsigned char uint8;
+typedef signed int int32;
 
 typedef struct {
   float width;
   float height;
   const char *title;
 } wbWindowConfig;
+
+typedef struct {
+  float r;
+  float g;
+  float b;
+  float a;
+} Color;
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,6 +37,10 @@ wbBool wb_shouldWindowClose(wbWindowID id);
 
 // Process application events
 void wb_processEvents(void);
+
+// Pass buffer data for drawing
+void wb_updateWindowPixels(wbWindowID id, const uint8 *pixels, int32 width,
+                           int32 height);
 
 #ifdef __cplusplus
 }

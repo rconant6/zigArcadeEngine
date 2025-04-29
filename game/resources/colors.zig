@@ -1,6 +1,6 @@
 const rl = @import("raylib");
 
-pub const Colors = struct {
+pub const GameColors = struct {
     pub const Ship = struct {
         pub const hullFill = rl.Color.init(51, 68, 85, 255);
         pub const hullOutline = rl.Color.init(136, 153, 170, 255);

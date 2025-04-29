@@ -20,6 +20,65 @@ class KeyHandlingView: NSView {
     }
 }
 
+class RenderView: KeyHandlingView {
+    var imageBuffer: UnsafeMutablePointer<UInt8>? = nil
+    var bitmapContext: CGContext? = nil
+    var width: Int = 0
+    var height: Int = 0
+    
+    func setupBitmapContext(width: Int, height: Int) {
+        self.width = width
+        self.height = height
+        
+        // Free old buffer if it exists
+        if let buffer = imageBuffer {
+            buffer.deallocate()
+            imageBuffer = nil
+        }
+        
+        // Allocate new buffer
+        imageBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: width * height * 4)
+        imageBuffer!.initialize(repeating: 0, count: width * height * 4)
+        
+        // Create CGContext
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        bitmapContext = CGContext(
+            data: imageBuffer,
+            width: width, height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: width * 4,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )
+    }
+    
+    func updateFromColors(colors: UnsafePointer<Color>, width: Int, height: Int) {
+        guard let buffer = imageBuffer else { return }
+        guard width == self.width && height == self.height else { return }
+        
+        // Convert float colors to 8-bit RGBA
+        for i in 0..<(width * height) {
+            let color = colors[i]
+            buffer[i*4 + 0] = UInt8(min(255, max(0, color.r * 255)))
+            buffer[i*4 + 1] = UInt8(min(255, max(0, color.g * 255)))
+            buffer[i*4 + 2] = UInt8(min(255, max(0, color.b * 255)))
+            buffer[i*4 + 3] = UInt8(min(255, max(0, color.a * 255)))
+        }
+        
+        // Trigger redraw
+        self.needsDisplay = true
+    }
+    
+    override func draw(_ dirtyRect: NSRect) {
+        guard let context = NSGraphicsContext.current?.cgContext else { return }
+        
+        if let cgImage = bitmapContext?.makeImage() {
+            // Draw the image
+            context.draw(cgImage, in: self.bounds)
+        }
+    }
+}
+
 @MainActor
 public final class WindowManager {
     static var shared = WindowManager()
@@ -91,6 +150,51 @@ public final class WindowManager {
         let app = NSApplication.shared
         while let event = app.nextEvent(matching: .any, until: nil, inMode: .default, dequeue: true) {
             app.sendEvent(event)
+        }
+    }
+    
+    func updateWindowPixels(windowID: UInt32, colors: UnsafePointer<Color>, width: Int, height: Int) {
+        guard let window = windows[windowID] else { return }
+    
+        var renderView: RenderView
+        
+        // Make sure we have a RenderView
+        if let existingView = window.contentView as? RenderView {
+            renderView = existingView
+        } else {
+            // Create a new RenderView
+            let frame = window.contentView?.frame ?? NSRect.zero
+            renderView = RenderView(frame: frame)
+            renderView.setupBitmapContext(width: width, height: height)
+            window.contentView = renderView
+            window.makeFirstResponder(renderView)
+        }
+    
+        // Update the pixels
+        renderView.updateFromColors(colors: colors, width: width, height: height)
+    }
+
+
+}
+
+@MainActor
+@_cdecl("wb_updateWindowPixels")
+public func wb_updateWindowPixels(_ windowID: UInt32, _ colors: UnsafePointer<Color>, width: Int32, height: Int32) {
+    if Thread.isMainThread {
+        WindowManager.shared.updateWindowPixels(
+            windowID: windowID,
+            colors: colors,
+            width: Int(width),
+            height: Int(height),
+        )
+    } else {
+        DispatchQueue.main.async {
+            WindowManager.shared.updateWindowPixels(
+                windowID: windowID,
+                colors: colors,
+                width: Int(width),
+                height: Int(height),
+            )
         }
     }
 }
