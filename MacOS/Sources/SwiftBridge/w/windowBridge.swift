@@ -113,7 +113,7 @@ public final class WindowManager {
         // Then in your createWindow function, replace the content view with:
         let contentView = KeyHandlingView(frame: rect)
         contentView.wantsLayer = true
-        contentView.layer?.backgroundColor = NSColor.systemRed.cgColor
+        contentView.layer?.backgroundColor = NSColor.black.cgColor
         window.contentView = contentView
 
 
