@@ -6,6 +6,8 @@ const gss = @import("gameStates.zig");
 const KeyCodes = bge.GameKeyCode;
 const Renderer = @import("renderer.zig").Renderer;
 const Color = @import("renderer.zig").Color;
+
+const Circle = @import("primitives.zig").Circle;
 const Point = @import("primitives.zig").Point;
 const Line = @import("primitives.zig").Line;
 
@@ -83,7 +85,7 @@ pub fn main() !void {
         // do a test of draw point in the center of the screen
         renderer.drawPoint(.{ .x = 0, .y = 0 }, Color.init(1, 1, 1, 1));
         // show the corners colored in to ensure mapping is correct
-        drawTestCorners(&renderer);
+        // drawTestCorners(&renderer);
 
         drawTestLines(&renderer);
 
@@ -111,6 +113,7 @@ pub fn main() !void {
 }
 
 fn drawTestLines(renderer: *Renderer) void {
+    const radius = 0.56;
     const center: Point = .{ .x = 0, .y = 0 }; // Center of screen
     const topLeft: Point = .{ .x = -1, .y = 1 }; // Top-left corner
     const topRight: Point = .{ .x = 1, .y = 1 }; // Top-right corner
@@ -122,19 +125,24 @@ fn drawTestLines(renderer: *Renderer) void {
     // vertical line
     const topEdge: Point = .{ .x = 0, .y = 1 };
     const bottomEdge: Point = .{ .x = 0, .y = -1 };
-    // random point for same testing
-    // const random: Point = .{ .x = 0.0, .y = 0.0 };
-    // const random2: Point = .{ .x = 0.5, .y = -0.666 };
+    // diagonal lines
     const diagStart: Point = .{ .x = -0.375, .y = 0.667 };
     const diagEnd: Point = .{ .x = 0.375, .y = -0.666 };
     const diagStart2: Point = .{ .x = -0.375, .y = -0.667 };
     const diagEnd2: Point = .{ .x = 0.375, .y = 0.666 };
     const diagLine: Line = .{ .start = diagStart, .end = diagEnd };
     const diagLine2: Line = .{ .start = diagStart2, .end = diagEnd2 };
-    // renderer.drawLinePts(diagStart, diagEnd, Color.init(0, 0, 0, 1));
-    renderer.drawLine(diagLine, Color.init(0, 0, 0, 1));
-    // renderer.drawLinePts(diagStart2, diagEnd2, Color.init(0, 0, 0, 1));
-    renderer.drawLine(diagLine2, Color.init(1, 1, 1, 1));
+
+    const centerCircle: Circle = .{ .origin = center, .radius = radius };
+    renderer.drawCircle(centerCircle, Color.init(1, 0.5, 0.8, 1), Color.init(0.75, 0.75, 0.75, 1));
+    const radius2 = 0.15;
+    renderer.drawCircle(.{ .origin = .{ .x = -0.25, .y = -0.25 }, .radius = radius2 }, null, Color.init(0.85, 0, 1, 1));
+    renderer.drawCircle(.{ .origin = .{ .x = 0.50, .y = 0.50 }, .radius = radius2 }, Color.init(0.85, 0.5, 1, 1), null);
+
+    renderer.drawLinePts(diagStart, diagEnd, Color.init(0, 0, 0, 1));
+    renderer.drawLine(diagLine, Color.init(0.25, 0.25, 0.25, 1));
+    renderer.drawLinePts(diagStart2, diagEnd2, Color.init(0, 0, 0, 1));
+    renderer.drawLine(diagLine2, Color.init(0.3, 0.3, 0.3, 1));
     renderer.drawLinePts(leftEdge, rightEdge, Color.init(0, 1, 1, 1));
     renderer.drawLinePts(topEdge, bottomEdge, Color.init(0, 1, 1, 1));
     renderer.drawLinePts(center, topLeft, Color.init(1, 0, 0, 1));
@@ -143,49 +151,49 @@ fn drawTestLines(renderer: *Renderer) void {
     renderer.drawLinePts(center, botRight, Color.init(1, 1, 0, 1));
 }
 
-fn drawTestCorners(renderer: *Renderer) void {
-    // Make 10x10 pixel squares in each corner for easier visibility
-    // Top-left: Red
-    for (0..10) |y| {
-        for (0..10) |x| {
-            renderer.frameBuffer.setPixel(
-                @intCast(x),
-                @intCast(y),
-                Color.init(1.0, 0.0, 0.0, 1.0),
-            );
-        }
-    }
-
-    // Top-right: Green
-    for (0..10) |y| {
-        for (0..10) |x| {
-            renderer.frameBuffer.setPixel(
-                @intCast(WIDTH - 1 - x),
-                @intCast(y),
-                Color.init(0.0, 1.0, 0.0, 1.0),
-            );
-        }
-    }
-
-    // Bottom-left: Blue
-    for (0..10) |y| {
-        for (0..10) |x| {
-            renderer.frameBuffer.setPixel(
-                @intCast(x),
-                @intCast(HEIGHT - 1 - y),
-                Color.init(0.0, 0.0, 1.0, 1.0),
-            );
-        }
-    }
-
-    // Bottom-right: Yellow
-    for (0..10) |y| {
-        for (0..10) |x| {
-            renderer.frameBuffer.setPixel(
-                @intCast(WIDTH - 1 - x),
-                @intCast(HEIGHT - 1 - y),
-                Color.init(1.0, 1.0, 0.0, 1.0),
-            );
-        }
-    }
-}
+// fn drawTestCorners(renderer: *Renderer) void {
+//     // Make 10x10 pixel squares in each corner for easier visibility
+//     // Top-left: Red
+//     for (0..10) |y| {
+//         for (0..10) |x| {
+//             renderer.frameBuffer.setPixel(
+//                 @intCast(x),
+//                 @intCast(y),
+//                 Color.init(1.0, 0.0, 0.0, 1.0),
+//             );
+//         }
+//     }
+//
+//     // Top-right: Green
+//     for (0..10) |y| {
+//         for (0..10) |x| {
+//             renderer.frameBuffer.setPixel(
+//                 @intCast(WIDTH - 1 - x),
+//                 @intCast(y),
+//                 Color.init(0.0, 1.0, 0.0, 1.0),
+//             );
+//         }
+//     }
+//
+//     // Bottom-left: Blue
+//     for (0..10) |y| {
+//         for (0..10) |x| {
+//             renderer.frameBuffer.setPixel(
+//                 @intCast(x),
+//                 @intCast(HEIGHT - 1 - y),
+//                 Color.init(0.0, 0.0, 1.0, 1.0),
+//             );
+//         }
+//     }
+//
+//     // Bottom-right: Yellow
+//     for (0..10) |y| {
+//         for (0..10) |x| {
+//             renderer.frameBuffer.setPixel(
+//                 @intCast(WIDTH - 1 - x),
+//                 @intCast(HEIGHT - 1 - y),
+//                 Color.init(1.0, 1.0, 0.0, 1.0),
+//             );
+//         }
+//     }
+// }

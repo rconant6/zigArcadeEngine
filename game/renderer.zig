@@ -25,7 +25,7 @@ pub const Renderer = struct {
             .width = width,
             .height = height,
             .allocator = allocator,
-            .clearColor = Color.init(1, 0, 1, 1),
+            .clearColor = Color.init(0, 0, 0, 1),
         };
     }
     pub fn deinit(self: *Renderer) void {
@@ -45,12 +45,29 @@ pub const Renderer = struct {
     }
 
     // MARK: Drawing
+    fn gameToScreenCoordsFromXY(self: *const Renderer, x: f32, y: f32) ScreenPoint {
+        const fw: f32 = @floatFromInt(self.width);
+        const fh: f32 = @floatFromInt(self.height);
+        const screenX: i32 = @intFromFloat((x + 1.0) * 0.5 * fw);
+        const screenY: i32 = @intFromFloat((1.0 - y) * 0.5 * fh);
+
+        return .{ .x = screenX, .y = screenY };
+    }
+
+    inline fn gameToScreenCoordsFromPoint(self: *const Renderer, point: Point) ScreenPoint {
+        return self.gameToScreenCoordsFromXY(point.x, point.y);
+    }
+
+    pub fn getRawFrameBuffer(self: *const Renderer) []const Color {
+        return self.frameBuffer.frontBuffer;
+    }
+
     pub fn draw(self: *Renderer) void { // probably called when we do batching
         _ = self;
     }
 
     pub fn drawPoint(self: *Renderer, point: Point, color: Color) void {
-        const screenPos = self.gameToScreenCoords(point.x, point.y);
+        const screenPos = self.gameToScreenCoordsFromPoint(point);
 
         if (screenPos.x < 0 or screenPos.x >= self.width or
             screenPos.y < 0 or screenPos.y >= self.height)
@@ -59,6 +76,7 @@ pub const Renderer = struct {
         self.frameBuffer.setPixel(screenPos.x, screenPos.y, color);
     }
 
+    // MARK: Lines
     fn getOctant(dx: i32, dy: i32) Octant {
         const absdx = @abs(dx);
         const absdy = @abs(dy);
@@ -79,30 +97,34 @@ pub const Renderer = struct {
     }
 
     fn drawHorizontalLine(self: *Renderer, data: BresenData, color: Color) void {
-        var x = data.x;
-        const y = data.y;
-        const endx = data.endx;
-        const step = data.stepx;
+        if (data.y < 0 or data.y > self.height) return;
 
-        while (x != endx + step) {
-            self.frameBuffer.setPixel(x, y, color);
-            x += step;
+        const startx: i32 = @max(0, data.x);
+        const endx: i32 = @min(self.width - 1, data.endx);
+
+        if (startx > endx) return;
+
+        var x: i32 = startx;
+        while (x < endx) : (x += 1) {
+            self.frameBuffer.setPixel(x, data.y, color);
         }
     }
 
     fn drawVerticalLine(self: *Renderer, data: BresenData, color: Color) void {
-        const x = data.x;
-        var y = data.y;
-        const endy = data.endy;
-        const step = data.stepy;
+        if (data.x < 0 or data.x > self.width) return;
 
-        while (y != endy + step) {
-            self.frameBuffer.setPixel(x, y, color);
-            y += step;
+        const starty = @max(0, data.y);
+        const endy = @min(self.height - 1, data.endy);
+
+        if (starty > endy) return;
+
+        var y = starty;
+        while (y < endy) : (y += 1) {
+            self.frameBuffer.setPixel(data.x, y, color);
         }
     }
 
-    fn drawDiagonalLine(self: *Renderer, data: BresenData, color: Color) void {
+    fn drawDiagonalLine(self: *Renderer, data: BresenData, color: Color) void { // TODO: clip to render area
         var x = data.x;
         var y = data.y;
         const steps = @abs(data.endx - data.x);
@@ -114,7 +136,7 @@ pub const Renderer = struct {
         }
     }
 
-    fn drawBresenLine(self: *Renderer, data: BresenData, color: Color) void {
+    fn drawBresenLine(self: *Renderer, data: BresenData, color: Color) void { // TODO: clip to render area
         var x = data.x;
         var y = data.y;
         var err = data.err;
@@ -135,7 +157,7 @@ pub const Renderer = struct {
             .x = start.x,
             .endx = end.x,
             .y = start.y,
-            .endy = start.y, // is this right?
+            .endy = start.y,
             .stepx = if (end.x > start.x) 1 else -1,
             .stepy = 0,
             .err = 0,
@@ -146,7 +168,7 @@ pub const Renderer = struct {
     inline fn getVerticalBresenData(start: ScreenPoint, end: ScreenPoint) BresenData {
         return .{
             .x = start.x,
-            .endx = start.x, // is this right? like above
+            .endx = start.x,
             .y = start.y,
             .endy = end.y,
             .stepx = 0,
@@ -248,8 +270,8 @@ pub const Renderer = struct {
     }
 
     pub fn drawLinePts(self: *Renderer, start: Point, end: Point, color: Color) void {
-        const screenStart = self.gameToScreenCoords(start.x, start.y);
-        const screenEnd = self.gameToScreenCoords(end.x, end.y);
+        const screenStart = self.gameToScreenCoordsFromPoint(start);
+        const screenEnd = self.gameToScreenCoordsFromPoint(end);
 
         if (screenStart.isSamePoint(screenEnd)) return self.drawPoint(start, color);
 
@@ -271,17 +293,91 @@ pub const Renderer = struct {
         self.drawLinePts(line.start, line.end, color);
     }
 
-    pub fn getRawFrameBuffer(self: *const Renderer) []const Color {
-        return self.frameBuffer.frontBuffer;
+    // MARK: Circle drawing
+    fn drawHorizontalScanLine(self: *Renderer, y: i32, startx: i32, endx: i32, color: Color) void {
+        if (y < 0 or y >= self.height) return;
+
+        const clippedStart = @max(0, startx);
+        const clippedEnd = @min(self.width - 1, endx);
+
+        var x = clippedStart;
+        while (x <= clippedEnd) : (x += 1) {
+            self.frameBuffer.setPixel(x, y, color);
+        }
     }
 
-    fn gameToScreenCoords(self: *const Renderer, x: f32, y: f32) ScreenPoint {
-        const fw: f32 = @floatFromInt(self.width);
-        const fh: f32 = @floatFromInt(self.height);
-        const screenX: i32 = @intFromFloat((x + 1.0) * 0.5 * fw);
-        const screenY: i32 = @intFromFloat((1.0 - y) * 0.5 * fh);
+    fn drawCircleFilled(self: *Renderer, circle: Circle, color: Color) void {
+        const center = self.gameToScreenCoordsFromPoint(circle.origin);
+        const edgeScreen = self.gameToScreenCoordsFromXY(circle.origin.x + circle.radius, circle.origin.y);
+        const screenRadius: i32 = edgeScreen.x - center.x;
 
-        return .{ .x = screenX, .y = screenY };
+        var x: i32 = 0;
+        var y: i32 = screenRadius;
+        var d: i32 = 1 - screenRadius;
+
+        self.drawHorizontalScanLine(center.y, center.x - screenRadius, center.x + screenRadius, color);
+
+        while (x <= y) {
+            if (d < 0) {
+                d += 2 * x + 3;
+            } else {
+                d += 2 * (x - y) + 5;
+                y -= 1;
+            }
+            x += 1;
+            self.drawHorizontalScanLine(center.y + y, center.x - x, center.x + x, color);
+            self.drawHorizontalScanLine(center.y - y, center.x - x, center.x + x, color);
+            self.drawHorizontalScanLine(center.y + x, center.x - y, center.x + y, color);
+            self.drawHorizontalScanLine(center.y - x, center.x - y, center.x + y, color);
+        }
+    }
+
+    inline fn plotCirclePoint(self: *Renderer, x: i32, y: i32, color: Color) void {
+        if (x >= 0 and x < self.width and y >= 0 and y < self.height) {
+            self.frameBuffer.setPixel(x, y, color);
+        }
+    }
+
+    fn plotCirclePoints(self: *Renderer, center: ScreenPoint, x: i32, y: i32, color: Color) void {
+        self.plotCirclePoint(center.x + x, center.y + y, color);
+        self.plotCirclePoint(center.x - x, center.y + y, color);
+        self.plotCirclePoint(center.x + x, center.y - y, color);
+        self.plotCirclePoint(center.x - x, center.y - y, color);
+        self.plotCirclePoint(center.x + y, center.y + x, color);
+        self.plotCirclePoint(center.x - y, center.y + x, color);
+        self.plotCirclePoint(center.x + y, center.y - x, color);
+        self.plotCirclePoint(center.x - y, center.y - x, color);
+    }
+
+    fn drawCircleOutline(self: *Renderer, circle: Circle, color: Color) void {
+        const center = self.gameToScreenCoordsFromPoint(circle.origin);
+        const edgeScreen = self.gameToScreenCoordsFromXY(circle.origin.x + circle.radius, circle.origin.y);
+        const screenRadius: i32 = edgeScreen.x - center.x;
+
+        var x: i32 = 0;
+        var y: i32 = screenRadius;
+        var d: i32 = 1 - screenRadius;
+
+        while (x <= y) {
+            self.plotCirclePoints(center, x, y, color);
+
+            if (d < 0) {
+                d += 2 * x + 3;
+            } else {
+                d += 2 * (x - y) + 5;
+                y -= 1;
+            }
+            x += 1;
+        }
+    }
+
+    pub fn drawCircle(self: *Renderer, circle: Circle, fillColor: ?Color, outlineColor: ?Color) void {
+        if (fillColor != null) {
+            self.drawCircleFilled(circle, fillColor.?);
+        }
+        if (outlineColor != null) {
+            self.drawCircleOutline(circle, outlineColor.?);
+        }
     }
 };
 
