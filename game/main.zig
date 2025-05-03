@@ -9,8 +9,9 @@ const Renderer = @import("renderer.zig").Renderer;
 
 const Circle = prim.Circle;
 const Color = prim.Color;
-const Point = prim.Point;
 const Line = prim.Line;
+const Point = prim.Point;
+const Rectangle = prim.Rectangle;
 
 const TARGET_FPS: f32 = 60.0;
 const TARGET_FRAME_TIME_NS: i64 = @intFromFloat((1.0 / TARGET_FPS) * std.time.ns_per_s);
@@ -88,6 +89,7 @@ pub fn main() !void {
         // show the corners colored in to ensure mapping is correct
         // drawTestCorners(&renderer);
 
+        drawTestRects(&renderer);
         drawTestLines(&renderer);
 
         renderer.endFrame();
@@ -131,8 +133,8 @@ fn drawTestLines(renderer: *Renderer) void {
     const diagEnd: Point = .{ .x = 0.375, .y = -0.666 };
     const diagStart2: Point = .{ .x = -0.375, .y = -0.667 };
     const diagEnd2: Point = .{ .x = 0.375, .y = 0.666 };
-    const diagLine: Line = .{ .start = diagStart, .end = diagEnd };
-    const diagLine2: Line = .{ .start = diagStart2, .end = diagEnd2 };
+    // const diagLine: Line = .{ .start = diagEnd, .end = diagStart };
+    // const diagLine2: Line = .{ .start = diagStart2, .end = diagEnd2 };
 
     const centerCircle: Circle = .{ .origin = center, .radius = radius };
     renderer.drawCircle(centerCircle, Color.init(1, 0.5, 0.8, 1), Color.init(0.75, 0.75, 0.75, 1));
@@ -141,60 +143,20 @@ fn drawTestLines(renderer: *Renderer) void {
     renderer.drawCircle(.{ .origin = .{ .x = 0.50, .y = 0.50 }, .radius = radius2 }, Color.init(0.85, 0.5, 1, 1), null);
 
     renderer.drawLinePts(diagStart, diagEnd, Color.init(0, 0, 0, 1));
-    renderer.drawLine(diagLine, Color.init(0.25, 0.25, 0.25, 1));
+    // renderer.drawLine(diagLine, Color.init(0.25, 0.25, 0.25, 1));
     renderer.drawLinePts(diagStart2, diagEnd2, Color.init(0, 0, 0, 1));
-    renderer.drawLine(diagLine2, Color.init(0.3, 0.3, 0.3, 1));
+    // renderer.drawLine(diagLine2, Color.init(0.3, 0.3, 0.3, 1));
     renderer.drawLinePts(leftEdge, rightEdge, Color.init(0, 1, 1, 1));
     renderer.drawLinePts(topEdge, bottomEdge, Color.init(0, 1, 1, 1));
-    renderer.drawLinePts(center, topLeft, Color.init(1, 0, 0, 1));
+    renderer.drawLinePts(topLeft, center, Color.init(1, 0, 0, 1));
     renderer.drawLinePts(center, topRight, Color.init(0, 1, 0, 1));
-    renderer.drawLinePts(center, botLeft, Color.init(0, 0, 1, 1));
+    renderer.drawLinePts(botLeft, center, Color.init(0, 0, 1, 1));
     renderer.drawLinePts(center, botRight, Color.init(1, 1, 0, 1));
 }
 
-// fn drawTestCorners(renderer: *Renderer) void {
-//     // Make 10x10 pixel squares in each corner for easier visibility
-//     // Top-left: Red
-//     for (0..10) |y| {
-//         for (0..10) |x| {
-//             renderer.frameBuffer.setPixel(
-//                 @intCast(x),
-//                 @intCast(y),
-//                 Color.init(1.0, 0.0, 0.0, 1.0),
-//             );
-//         }
-//     }
-//
-//     // Top-right: Green
-//     for (0..10) |y| {
-//         for (0..10) |x| {
-//             renderer.frameBuffer.setPixel(
-//                 @intCast(WIDTH - 1 - x),
-//                 @intCast(y),
-//                 Color.init(0.0, 1.0, 0.0, 1.0),
-//             );
-//         }
-//     }
-//
-//     // Bottom-left: Blue
-//     for (0..10) |y| {
-//         for (0..10) |x| {
-//             renderer.frameBuffer.setPixel(
-//                 @intCast(x),
-//                 @intCast(HEIGHT - 1 - y),
-//                 Color.init(0.0, 0.0, 1.0, 1.0),
-//             );
-//         }
-//     }
-//
-//     // Bottom-right: Yellow
-//     for (0..10) |y| {
-//         for (0..10) |x| {
-//             renderer.frameBuffer.setPixel(
-//                 @intCast(WIDTH - 1 - x),
-//                 @intCast(HEIGHT - 1 - y),
-//                 Color.init(1.0, 1.0, 0.0, 1.0),
-//             );
-//         }
-//     }
-// }
+fn drawTestRects(renderer: *Renderer) void {
+    const rect = Rectangle.initFromCenter(.{ .x = 0, .y = 0 }, 1.8, 1.8);
+    const square = Rectangle.initSquare(.{ .x = 0, .y = 0 }, 1.5);
+    renderer.drawRectangle(rect, Color.init(1, 1, 1, 1), Color.init(1, 1, 1, 1));
+    renderer.drawRectangle(square, Color.init(0, 1, 1, 1), Color.init(0, 1, 1, 1));
+}

@@ -78,216 +78,86 @@ pub const Renderer = struct {
     }
 
     // MARK: Lines
-    fn getOctant(dx: i32, dy: i32) Octant {
-        const absdx = @abs(dx);
-        const absdy = @abs(dy);
-
-        // Special cases
-        if (dx == 0) return .Vertical;
-        if (dy == 0) return .Horizontal;
-        if (absdx == absdy) return .Diagonal;
-
-        // Non-specific cases
-        const octantCalc: OctantCalc = .{
-            .lr = if (dx < 0) true else false,
-            .ud = if (dy < 0) true else false,
-            .steep = if (absdy > absdx) true else false,
-        };
-        const octantInt: u8 = @bitCast(octantCalc);
-        return @enumFromInt(octantInt);
-    }
-
-    fn drawHorizontalLine(self: *Renderer, data: BresenData, color: Color) void {
-        if (data.y < 0 or data.y > self.height) return;
-
-        const startx: i32 = @max(0, data.x);
-        const endx: i32 = @min(self.width - 1, data.endx);
-
-        if (startx > endx) return;
-
-        var x: i32 = startx;
-        while (x < endx) : (x += 1) {
-            self.frameBuffer.setPixel(x, data.y, color);
-        }
-    }
-
-    fn drawVerticalLine(self: *Renderer, data: BresenData, color: Color) void {
-        if (data.x < 0 or data.x > self.width) return;
-
-        const starty = @max(0, data.y);
-        const endy = @min(self.height - 1, data.endy);
-
-        if (starty > endy) return;
-
-        var y = starty;
-        while (y < endy) : (y += 1) {
-            self.frameBuffer.setPixel(data.x, y, color);
-        }
-    }
-
-    fn drawDiagonalLine(self: *Renderer, data: BresenData, color: Color) void { // TODO: clip to render area
-        var x = data.x;
-        var y = data.y;
-        const steps = @abs(data.endx - data.x);
-
-        for (0..steps) |_| {
-            self.frameBuffer.setPixel(x, y, color);
-            x += data.stepx;
-            y += data.stepy;
-        }
-    }
-
-    fn drawBresenLine(self: *Renderer, data: BresenData, color: Color) void { // TODO: clip to render area
-        var x = data.x;
-        var y = data.y;
-        var err = data.err;
-
-        while (x != data.endx) {
-            self.frameBuffer.setPixel(x, y, color);
-            x += data.stepx;
-            err += data.errAdjustment;
-            if (err >= 0) {
-                y += data.stepy;
-                err -= data.errThreshold;
-            }
-        }
-    }
-
-    inline fn getHorizontalBresenData(start: ScreenPoint, end: ScreenPoint) BresenData {
-        return .{
-            .x = start.x,
-            .endx = end.x,
-            .y = start.y,
-            .endy = start.y,
-            .stepx = if (end.x > start.x) 1 else -1,
-            .stepy = 0,
-            .err = 0,
-            .errThreshold = 0,
-            .errAdjustment = 0,
-        };
-    }
-    inline fn getVerticalBresenData(start: ScreenPoint, end: ScreenPoint) BresenData {
-        return .{
-            .x = start.x,
-            .endx = start.x,
-            .y = start.y,
-            .endy = end.y,
-            .stepx = 0,
-            .stepy = if (end.y > start.y) 1 else -1,
-            .err = 0,
-            .errThreshold = 0,
-            .errAdjustment = 0,
-        };
-    }
-    inline fn getDiagonalBresenData(start: ScreenPoint, end: ScreenPoint) BresenData {
-        return .{
-            .x = start.x,
-            .endx = end.x,
-            .y = start.y,
-            .endy = end.y,
-            .stepx = if (end.x > start.x) 1 else -1,
-            .stepy = if (end.y > start.y) 1 else -1,
-            .err = 0,
-            .errThreshold = 0,
-            .errAdjustment = 0,
-        };
-    }
-
-    inline fn configureFirstQuadrant(start: ScreenPoint, end: ScreenPoint, dx: i32, dy: i32, octant: Octant) BresenData {
-        std.debug.assert(octant == .RightSlightUp or octant == .UpSlightRight);
-        const absdx: i32 = @intCast(@abs(dx));
-        const absdy: i32 = @intCast(@abs(dy));
-        return .{
-            .x = if (octant == .RightSlightUp) start.x else start.y,
-            .endx = if (octant == .RightSlightUp) end.x else end.y,
-            .y = if (octant == .RightSlightUp) start.y else start.x,
-            .endy = if (octant == .RightSlightUp) end.y else end.x,
-            .stepx = 1,
-            .stepy = -1,
-            .err = -@divFloor(if (octant == .RightSlightUp) dx else dy, 2),
-            .errThreshold = if (octant == .RightSlightUp) absdx else absdy,
-            .errAdjustment = if (octant == .RightSlightUp) absdy else absdx,
-        };
-    }
-    inline fn configureSecondQuadrant(start: ScreenPoint, end: ScreenPoint, dx: i32, dy: i32, octant: Octant) BresenData {
-        std.debug.assert(octant == .RightSlightDown or octant == .DownSlightRight);
-        const absdx: i32 = @intCast(@abs(dx));
-        const absdy: i32 = @intCast(@abs(dy));
-        return .{
-            .x = if (octant == .RightSlightDown) start.x else start.y,
-            .endx = if (octant == .RightSlightDown) end.x else end.y,
-            .y = if (octant == .RightSlightDown) start.y else start.x,
-            .endy = if (octant == .RightSlightDown) end.y else end.x,
-            .stepx = 1,
-            .stepy = 1,
-            .err = -@divFloor(if (octant == .RightSlightDown) absdx else absdy, 2),
-            .errThreshold = if (octant == .RightSlightDown) absdx else absdy,
-            .errAdjustment = if (octant == .RightSlightDown) absdy else absdx,
-        };
-    }
-    inline fn configureThirdQuadrant(start: ScreenPoint, end: ScreenPoint, dx: i32, dy: i32, octant: Octant) BresenData {
-        std.debug.assert(octant == .LeftSlightDown or octant == .DownSlightLeft);
-        const absdx: i32 = @intCast(@abs(dx));
-        const absdy: i32 = @intCast(@abs(dy));
-        return .{
-            .x = if (octant == .LeftSlightDown) end.x else end.y,
-            .endx = if (octant == .LeftSlightDown) start.x else start.y,
-            .y = if (octant == .LeftSlightDown) end.y else end.x,
-            .endy = if (octant == .LeftSlightDown) start.y else start.x,
-            .stepx = 1,
-            .stepy = -1,
-            .err = -@divFloor(if (octant == .LeftSlightDown) absdx else absdy, 2),
-            .errThreshold = if (octant == .LeftSlightDown) absdx else absdy,
-            .errAdjustment = if (octant == .LeftSlightDown) absdy else absdx,
-        };
-    }
-    inline fn configureFourthQuadrant(start: ScreenPoint, end: ScreenPoint, dx: i32, dy: i32, octant: Octant) BresenData {
-        std.debug.assert(octant == .LeftSlightUp or octant == .UpSlightLeft);
-        const absdx: i32 = @intCast(@abs(dx));
-        const absdy: i32 = @intCast(@abs(dy));
-        return .{
-            .x = if (octant == .LeftSlightUp) end.x else end.y,
-            .endx = if (octant == .LeftSlightUp) start.x else start.y,
-            .y = if (octant == .LeftSlightUp) end.y else end.x,
-            .endy = if (octant == .LeftSlightUp) start.y else start.x,
-            .stepx = 1,
-            .stepy = 1,
-            .err = -@divFloor(if (octant == .LeftSlightUp) absdx else absdy, 2),
-            .errThreshold = if (octant == .LeftSlightUp) absdx else absdy,
-            .errAdjustment = if (octant == .LeftSlightUp) absdy else absdx,
-        };
-    }
-
-    fn getBresenData(octant: Octant, start: ScreenPoint, end: ScreenPoint, dx: i32, dy: i32) BresenData {
-        return switch (octant) {
-            .Horizontal => getHorizontalBresenData(start, end),
-            .Vertical => getVerticalBresenData(start, end),
-            .Diagonal => getDiagonalBresenData(start, end),
-            .RightSlightUp, .UpSlightRight => |o| configureFirstQuadrant(start, end, dx, dy, o),
-            .RightSlightDown, .DownSlightRight => |o| configureSecondQuadrant(start, end, dx, dy, o),
-            .LeftSlightDown, .DownSlightLeft => |o| configureThirdQuadrant(start, end, dx, dy, o),
-            .LeftSlightUp, .UpSlightLeft => |o| configureFourthQuadrant(start, end, dx, dy, o),
-        };
-    }
-
     pub fn drawLinePts(self: *Renderer, start: Point, end: Point, color: Color) void {
         const screenStart = self.gameToScreenCoordsFromPoint(start);
         const screenEnd = self.gameToScreenCoordsFromPoint(end);
 
         if (screenStart.isSamePoint(screenEnd)) return self.drawPoint(start, color);
+        var x = screenStart.x;
+        var y = screenStart.y;
+        const endX = screenEnd.x;
+        const endY = screenEnd.y;
 
-        const dx: i32 = screenEnd.x - screenStart.x;
-        const dy: i32 = screenEnd.y - screenStart.y;
+        // Get the differences
+        var dx = screenEnd.x - screenStart.x;
+        var dy = screenEnd.y - screenStart.y;
 
-        const octant = getOctant(dx, dy);
-        const data = getBresenData(octant, screenStart, screenEnd, dx, dy);
+        // Determine the sign of the increments
+        const stepX: i32 = if (dx < 0) -1 else 1;
+        const stepY: i32 = if (dy < 0) -1 else 1;
 
-        return switch (octant) {
-            .Horizontal => drawHorizontalLine(self, data, color),
-            .Vertical => drawVerticalLine(self, data, color),
-            .Diagonal => drawDiagonalLine(self, data, color),
-            else => drawBresenLine(self, data, color),
-        };
+        // Make dx, dy positive for calculations
+        dx = @intCast(@abs(dx));
+        dy = @intCast(@abs(dy));
+
+        // Special cases for horizontal, vertical, and diagonal can stay as they are
+        if (dx == 0) {
+            // Handle vertical case
+            while (y != endY) : (y += stepY) {
+                self.frameBuffer.setPixel(x, y, color);
+            }
+        } else if (dy == 0) {
+            // Handle horizontal case
+            while (x != endX) : (x += stepX) {
+                self.frameBuffer.setPixel(x, y, color);
+            }
+        } else if (dx == dy) {
+            // Handle diagonal case
+            while (x != endX) {
+                self.frameBuffer.setPixel(x, y, color);
+                x += stepX;
+                y += stepY;
+            }
+        } else {
+            // Standard Bresenham algorithm with proper handling of directions
+            var err: i32 = 0;
+
+            if (dx > dy) {
+                // x-dominant case
+                err = @divFloor(dx, 2);
+
+                while (x != endX + stepX) {
+                    if (x >= 0 and x < self.width and y >= 0 and y < self.height) {
+                        self.frameBuffer.setPixel(x, y, color);
+                    }
+
+                    err -= dy;
+                    if (err < 0) {
+                        y += stepY;
+                        err += dx;
+                    }
+
+                    x += stepX;
+                }
+            } else {
+                // y-dominant case
+                err = @divFloor(dy, 2);
+
+                while (y != endY + stepY) {
+                    if (x >= 0 and x < self.width and y >= 0 and y < self.height) {
+                        self.frameBuffer.setPixel(x, y, color);
+                    }
+
+                    err -= dx;
+                    if (err < 0) {
+                        x += stepX;
+                        err += dy;
+                    }
+
+                    y += stepY;
+                }
+            }
+        }
     }
 
     pub fn drawLine(self: *Renderer, line: Line, color: Color) void {
@@ -380,43 +250,53 @@ pub const Renderer = struct {
             self.drawCircleOutline(circle, outlineColor.?);
         }
     }
+
+    // MARK: Rectangles
+    fn drawRectFilled(self: *Renderer, rect: Rectangle, color: Color) void {
+        const corners = rect.getCorners();
+
+        const topLeft = self.gameToScreenCoordsFromPoint(corners[0]);
+        const bottomRight = self.gameToScreenCoordsFromPoint(corners[2]);
+
+        std.debug.assert(topLeft.x <= bottomRight.x);
+        std.debug.assert(topLeft.y <= bottomRight.y);
+
+        const startX = @max(0, topLeft.x);
+        const endX = @min(self.width, bottomRight.x);
+        const startY = @max(0, topLeft.y);
+        const endY = @min(self.height, bottomRight.y);
+
+        if (startX > self.width or endX < 0 or startY > self.height or endY < 0) return;
+
+        var y = startY;
+        while (y <= endY) : (y += 1) {
+            var x = startX;
+            while (x <= endX) : (x += 1) {
+                self.frameBuffer.setPixel(x, y, color);
+            }
+        }
+    }
+
+    fn drawRectOutline(self: *Renderer, rect: Rectangle, color: Color) void {
+        const corners = rect.getCorners();
+        for (0..4) |i| {
+            const start = corners[i];
+            const end = corners[(i + 1) % 4];
+            self.drawLinePts(start, end, color);
+        }
+    }
+
+    pub fn drawRectangle(self: *Renderer, rect: Rectangle, fillColor: ?Color, outlineColor: ?Color) void {
+        if (fillColor) |fc| {
+            self.drawRectFilled(rect, fc);
+        }
+        if (outlineColor) |oc| {
+            self.drawRectOutline(rect, oc);
+        }
+    }
 };
 
 // MARK: Types
-const BresenData = struct {
-    x: i32 = 0,
-    y: i32 = 0,
-    endx: i32 = 0,
-    endy: i32 = 0,
-    stepx: i32 = 0,
-    stepy: i32 = 0,
-    err: i32 = 0,
-    errThreshold: i32 = 0,
-    errAdjustment: i32 = 0,
-};
-
-const OctantCalc = packed struct {
-    lr: bool,
-    ud: bool,
-    steep: bool,
-    zeros: u5 = 0,
-};
-
-const Octant = enum {
-    RightSlightUp, // 000: dx>0, dy>0, |dx|>|dy|
-    LeftSlightDown, // 001: dx<0, dy>0, |dx|>|dy|
-    RightSlightDown, // 010: dx>0, dy<0, |dx|>|dy|
-    LeftSlightUp, // 011: dx<0, dy<0, |dx|>|dy|
-    UpSlightRight, // 100: dx>0, dy>0, |dx|<|dy|
-    UpSlightLeft, // 101: dx<0, dy>0, |dx|<|dy|
-    DownSlightRight, // 110: dx>0, dy<0, |dx|<|dy|
-    DownSlightLeft, // 111: dx<0, dy<0, |dx|<|dy|
-
-    // Special cases remain the same
-    Horizontal, // dx ≠ 0, dy = 0
-    Vertical, // dx = 0, dy ≠ 0
-    Diagonal, // |dx| = |dy|
-};
 const ScreenPoint = struct {
     x: i32,
     y: i32,
@@ -425,9 +305,9 @@ const ScreenPoint = struct {
         return self.x == otherPoint.x and self.y == otherPoint.y;
     }
 };
-
-pub const Transform = struct {
-    position: Point,
-    rotation: f32,
-    scale: f32,
-};
+//
+// pub const Transform = struct {
+//     position: Point,
+//     rotation: f32,
+//     scale: f32,
+// };
