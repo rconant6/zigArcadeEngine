@@ -3,11 +3,12 @@ const std = @import("std");
 const FrameBuffer = @import("frameBuffer.zig").FrameBuffer;
 
 const prm = @import("primitives.zig");
-const Point = prm.Point;
-const Line = prm.Line;
-const Rectangle = prm.Rectangle;
 const Circle = prm.Circle;
+const Color = prm.Color;
 const Ellipse = prm.Ellipse;
+const Line = prm.Line;
+const Point = prm.Point;
+const Rectangle = prm.Rectangle;
 
 pub const Renderer = struct {
     frameBuffer: FrameBuffer,
@@ -423,21 +424,6 @@ const ScreenPoint = struct {
     fn isSamePoint(self: *const ScreenPoint, otherPoint: ScreenPoint) bool {
         return self.x == otherPoint.x and self.y == otherPoint.y;
     }
-};
-
-pub const Color = struct {
-    r: f32,
-    g: f32,
-    b: f32,
-    a: f32,
-
-    pub fn init(r: f32, g: f32, b: f32, a: f32) Color {
-        return .{ .r = r, .g = g, .b = b, .a = a };
-    }
-
-    // pub fn toVec4(self: Color) @Vector(4, f32) {
-    //     return .{ self.r, self.g, self.b, self.a };
-    // }
 };
 
 pub const Transform = struct {

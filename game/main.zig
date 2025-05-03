@@ -2,14 +2,15 @@ const std = @import("std");
 const bge = @import("bridge.zig");
 const gsm = @import("gameStateManager.zig");
 const gss = @import("gameStates.zig");
+const prim = @import("primitives.zig");
 
 const KeyCodes = bge.GameKeyCode;
 const Renderer = @import("renderer.zig").Renderer;
-const Color = @import("renderer.zig").Color;
 
-const Circle = @import("primitives.zig").Circle;
-const Point = @import("primitives.zig").Point;
-const Line = @import("primitives.zig").Line;
+const Circle = prim.Circle;
+const Color = prim.Color;
+const Point = prim.Point;
+const Line = prim.Line;
 
 const TARGET_FPS: f32 = 60.0;
 const TARGET_FRAME_TIME_NS: i64 = @intFromFloat((1.0 / TARGET_FPS) * std.time.ns_per_s);

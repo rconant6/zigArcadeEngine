@@ -1,7 +1,7 @@
 const std = @import("std");
+const prim = @import("primitives.zig");
 
-const ren = @import("renderer.zig");
-const Color = ren.Color;
+const Color = prim.Color;
 
 pub const FrameBuffer = struct {
     width: i32,

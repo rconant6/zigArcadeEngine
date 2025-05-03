@@ -38,3 +38,23 @@ pub const Ellipse = struct {
     semiMinor: f32,
     semiMajor: f32,
 };
+
+pub const Color = struct {
+    r: f32,
+    g: f32,
+    b: f32,
+    a: f32,
+
+    pub fn init(r: f32, g: f32, b: f32, a: f32) Color {
+        return .{ .r = r, .g = g, .b = b, .a = a };
+    }
+
+    pub fn initFromInt(r: u8, g: u8, b: u8, a: u8) Color {
+        return .{
+            .r = @as(f32, @floatFromInt(r)) / 255.0,
+            .g = @as(f32, @floatFromInt(g)) / 255.0,
+            .b = @as(f32, @floatFromInt(b)) / 255.0,
+            .a = @as(f32, @floatFromInt(a)) / 255.0,
+        };
+    }
+};
