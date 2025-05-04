@@ -27,8 +27,7 @@ pub fn main() !void {
     // Initialize the application
     const app = bge.c.wb_initApplication();
     if (app == 0) {
-        std.debug.print("Failed to initialize application\n", .{});
-        return error.ApplicationInitFailed;
+        std.process.fatal("[MAIN] failed to initialize native application: {}\n", .{error.FailedApplicationLaunch});
     }
     // Create a window
     var window = try bge.Window.create(.{
@@ -38,12 +37,16 @@ pub fn main() !void {
     });
     defer window.destroy();
     // Initialize keyboard
-    var keyboard = try bge.Keyboard.init();
+    var keyboard = bge.Keyboard.init() catch |err| {
+        std.process.fatal("[MAIN] failed to initialize keyboard input: {}\n", .{err});
+    };
     defer keyboard.deinit();
 
     // MARK: Internal stuff that runs the game
     var stateManager = gsm.GameStateManager.init(); // place holder for the engine
-    var renderer = Renderer.init(&allocator, WIDTH, HEIGHT);
+    var renderer = Renderer.init(&allocator, WIDTH, HEIGHT) catch |err| {
+        std.process.fatal("[MAIN] failed to initialize renderer: {}\n", .{err});
+    };
     defer renderer.deinit();
     // Main loop
     var running = true;
