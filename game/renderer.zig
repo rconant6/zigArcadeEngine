@@ -17,10 +17,9 @@ pub const Renderer = struct {
     allocator: *std.mem.Allocator,
     clearColor: Color,
 
-    pub fn init(allocator: *std.mem.Allocator, width: i32, height: i32) Renderer {
-        const frameBuffer = FrameBuffer.init(allocator, width, height) catch {
-            unreachable;
-        };
+    pub fn init(allocator: *std.mem.Allocator, width: i32, height: i32) !Renderer {
+        const frameBuffer = try FrameBuffer.init(allocator, width, height);
+
         return Renderer{
             .frameBuffer = frameBuffer,
             .width = width,
