@@ -72,6 +72,10 @@ pub const Rectangle = struct {
     }
 };
 
+pub const Triangle = struct {
+    vertices: [3]Point,
+};
+
 pub const Circle = struct {
     origin: Point,
     radius: f32,
