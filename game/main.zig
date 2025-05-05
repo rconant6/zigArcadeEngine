@@ -94,6 +94,7 @@ pub fn main() !void {
 
         drawTestRects(&renderer);
         drawTestLines(&renderer);
+        drawTestTriangles(&renderer);
 
         renderer.endFrame();
 
@@ -145,16 +146,30 @@ fn drawTestLines(renderer: *Renderer) void {
     renderer.drawCircle(.{ .origin = .{ .x = -0.25, .y = -0.25 }, .radius = radius2 }, null, Color.init(0.85, 0, 1, 1));
     renderer.drawCircle(.{ .origin = .{ .x = 0.50, .y = 0.50 }, .radius = radius2 }, Color.init(0.85, 0.5, 1, 1), null);
 
-    renderer.drawLinePts(diagStart, diagEnd, Color.init(0, 0, 0, 1));
+    renderer.drawLine(diagStart, diagEnd, Color.init(0, 0, 0, 1));
     // renderer.drawLine(diagLine, Color.init(0.25, 0.25, 0.25, 1));
-    renderer.drawLinePts(diagStart2, diagEnd2, Color.init(0, 0, 0, 1));
+    renderer.drawLine(diagStart2, diagEnd2, Color.init(0, 0, 0, 1));
     // renderer.drawLine(diagLine2, Color.init(0.3, 0.3, 0.3, 1));
-    renderer.drawLinePts(leftEdge, rightEdge, Color.init(0, 1, 1, 1));
-    renderer.drawLinePts(topEdge, bottomEdge, Color.init(0, 1, 1, 1));
-    renderer.drawLinePts(topLeft, center, Color.init(1, 0, 0, 1));
-    renderer.drawLinePts(center, topRight, Color.init(0, 1, 0, 1));
-    renderer.drawLinePts(botLeft, center, Color.init(0, 0, 1, 1));
-    renderer.drawLinePts(center, botRight, Color.init(1, 1, 0, 1));
+    renderer.drawLine(leftEdge, rightEdge, Color.init(0, 1, 1, 1));
+    renderer.drawLine(topEdge, bottomEdge, Color.init(0, 1, 1, 1));
+    renderer.drawLine(topLeft, center, Color.init(1, 0, 0, 1));
+    renderer.drawLine(center, topRight, Color.init(0, 1, 0, 1));
+    renderer.drawLine(botLeft, center, Color.init(0, 0, 1, 1));
+    renderer.drawLine(center, botRight, Color.init(1, 1, 0, 1));
+}
+
+fn drawTestTriangles(renderer: *Renderer) void {
+    // Flat Top
+    const v1: Point = .{ .x = 1, .y = 1 };
+    const v2: Point = .{ .x = -1, .y = 1 };
+    const v3: Point = .{ .x = 0, .y = 0 };
+    // Flat Bottom
+    const v11: Point = .{ .x = -1, .y = -1 };
+    const v22: Point = .{ .x = 1, .y = -1 };
+    const v33: Point = .{ .x = 0, .y = 0 };
+
+    renderer.drawTriangle(.{ .vertices = .{ v1, v2, v3 } }, Color.init(0.2, 0.5, 0.8, 1), Color.init(0.2, 0.8, 0.5, 1));
+    renderer.drawTriangle(.{ .vertices = .{ v11, v22, v33 } }, Color.init(0.2, 0.5, 0.8, 1), Color.init(0.2, 0.8, 0.5, 1));
 }
 
 fn drawTestRects(renderer: *Renderer) void {
