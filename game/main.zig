@@ -61,12 +61,10 @@ pub fn main() !void {
         currentTime = std.time.microTimestamp();
         elapsed = @floatFromInt(currentTime - frameEndTime);
         dt = elapsed / F32_NS_PER_S;
-        // Process window events
         window.processEvents();
 
         stateManager.update(dt);
 
-        // Check window close
         if (window.shouldClose()) {
             running = false;
             continue;
@@ -87,11 +85,8 @@ pub fn main() !void {
         }
 
         renderer.beginFrame();
-        // do a test of draw point in the center of the screen
-        renderer.drawPoint(.{ .x = 0, .y = 0 }, Color.init(1, 1, 1, 1));
-        // show the corners colored in to ensure mapping is correct
-        // drawTestCorners(&renderer);
 
+        // Test shape drawing on the renderer
         drawTestRects(&renderer);
         drawTestLines(&renderer);
         drawTestTriangles(&renderer);
@@ -143,8 +138,16 @@ fn drawTestLines(renderer: *Renderer) void {
     const centerCircle: Circle = .{ .origin = center, .radius = radius };
     renderer.drawCircle(centerCircle, Color.init(1, 0.5, 0.8, 1), Color.init(0.75, 0.75, 0.75, 1));
     const radius2 = 0.15;
-    renderer.drawCircle(.{ .origin = .{ .x = -0.25, .y = -0.25 }, .radius = radius2 }, null, Color.init(0.85, 0, 1, 1));
-    renderer.drawCircle(.{ .origin = .{ .x = 0.50, .y = 0.50 }, .radius = radius2 }, Color.init(0.85, 0.5, 1, 1), null);
+    renderer.drawCircle(
+        .{ .origin = .{ .x = -0.25, .y = -0.25 }, .radius = radius2 },
+        null,
+        Color.init(0.85, 0, 1, 1),
+    );
+    renderer.drawCircle(
+        .{ .origin = .{ .x = 0.50, .y = 0.50 }, .radius = radius2 },
+        Color.init(0.85, 0.5, 1, 1),
+        null,
+    );
 
     renderer.drawLine(diagStart, diagEnd, Color.init(0, 0, 0, 1));
     // renderer.drawLine(diagLine, Color.init(0.25, 0.25, 0.25, 1));
@@ -172,9 +175,21 @@ fn drawTestTriangles(renderer: *Renderer) void {
     const r2: Point = .{ .x = -0.95, .y = 0 };
     const r3: Point = .{ .x = 0.1, .y = -0.35 };
 
-    renderer.drawTriangle(.{ .vertices = .{ v1, v2, v3 } }, Color.init(0.2, 0.5, 0.8, 1), Color.init(0.2, 0.8, 0.5, 1));
-    renderer.drawTriangle(.{ .vertices = .{ v11, v22, v33 } }, Color.init(0.2, 0.5, 0.8, 1), Color.init(0.2, 0.8, 0.5, 1));
-    renderer.drawTriangle(.{ .vertices = .{ r1, r2, r3 } }, Color.init(0.2, 0.5, 0.8, 1), Color.init(0.2, 0.8, 0.5, 1));
+    renderer.drawTriangle(
+        .{ .vertices = .{ v1, v2, v3 } },
+        Color.init(0.2, 0.5, 0.8, 1),
+        Color.init(0.2, 0.8, 0.5, 1),
+    );
+    renderer.drawTriangle(
+        .{ .vertices = .{ v11, v22, v33 } },
+        Color.init(0.2, 0.5, 0.8, 1),
+        Color.init(0.2, 0.8, 0.5, 1),
+    );
+    renderer.drawTriangle(
+        .{ .vertices = .{ r1, r2, r3 } },
+        Color.init(0.2, 0.5, 0.8, 1),
+        Color.init(0.2, 0.8, 0.5, 1),
+    );
 }
 
 fn drawTestRects(renderer: *Renderer) void {
