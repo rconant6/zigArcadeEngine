@@ -429,30 +429,29 @@ pub const Renderer = struct {
         defer self.allocator.free(sortedVerts);
         std.mem.sort(Point, sortedVerts, {}, sortPointByY);
 
-        // const x1 = sortedVerts[1].x - sortedVerts[0].x;
-        const y1 = sortedVerts[0].y - sortedVerts[1].y;
-        // const x2 = sortedVerts[2].x - sortedVerts[0].x;
-        // const y2 = sortedVerts[0].y - sortedVerts[2].y;
-        // const x3 = sortedVerts[2].x - sortedVerts[1].x;
-        const y3 = sortedVerts[2].y - sortedVerts[1].y;
+        const v0 = sortedVerts[0];
+        const v1 = sortedVerts[1];
+        const v2 = sortedVerts[2];
 
-        if (y1 == 0) {
-            self.drawFlatTopTriangle(sortedVerts[0], sortedVerts[1], sortedVerts[2], color);
-        } else if (y3 == 0) {
-            self.drawFlatBottomTriangle(sortedVerts[0], sortedVerts[1], sortedVerts[2], color);
+        if (v0.y == v1.y) {
+            self.drawFlatTopTriangle(v0, v1, v2, color);
+        } else if (v1.y == v2.y) {
+            self.drawFlatBottomTriangle(v0, v1, v2, color);
         } else {
-            std.debug.print("Non-flat triangle passed in\n", .{});
+            const factor = (v1.y - v0.y) / (v2.y - v0.y);
+            const v3 = Point{ .x = v0.x + factor * (v2.x - v0.x), .y = v1.y };
+
+            self.drawFlatBottomTriangle(v0, v1, v3, color);
+            self.drawFlatTopTriangle(v1, v3, v2, color);
         }
     }
 
     fn drawFlatTopTriangle(self: *Renderer, v1: Point, v2: Point, v3: Point, color: Color) void {
         std.debug.assert(v1.y == v2.y);
 
-        // Determine left and right vertices at the top
         const topLeft = if (v1.x < v2.x) v1 else v2;
         const topRight = if (v1.x < v2.x) v2 else v1;
 
-        // Get screen coordinates
         const screenTopLeftX = self.gameToScreenCoordsX(topLeft.x);
         const screenTopLeftY = self.gameToScreenCoordsY(topLeft.y);
         const screenTopRightX = self.gameToScreenCoordsX(topRight.x);
@@ -460,22 +459,17 @@ pub const Renderer = struct {
         const screenBottomX = self.gameToScreenCoordsX(v3.x);
         const screenBottomY = self.gameToScreenCoordsY(v3.y);
 
-        // Calculate total distances in screen space
         const leftYDist = screenBottomY - screenTopLeftY;
         const rightYDist = screenBottomY - screenTopRightY;
 
         const leftXDist = screenTopLeftX - screenBottomX;
         const rightXDist = screenTopRightX - screenBottomX;
 
-        // Calculate increments - how much X changes per Y step
-        // Since we're moving upward, we need values that will take us from bottom to top
         const leftXInc: f32 = @as(f32, @floatFromInt(leftXDist)) / @as(f32, @floatFromInt(leftYDist));
         const rightXInc: f32 = @as(f32, @floatFromInt(rightXDist)) / @as(f32, @floatFromInt(rightYDist));
 
-        // Start at the bottom and move upward
         var currY = screenBottomY;
 
-        // Use floating point for x positions to avoid accumulated rounding errors
         var leftX: f32 = @floatFromInt(screenBottomX);
         var rightX: f32 = @floatFromInt(screenBottomX);
 
@@ -492,11 +486,9 @@ pub const Renderer = struct {
     fn drawFlatBottomTriangle(self: *Renderer, v1: Point, v2: Point, v3: Point, color: Color) void {
         std.debug.assert(v2.y == v3.y);
 
-        // Determine left and right vertices at the bottom
         const botLeft = if (v2.x < v3.x) v2 else v3;
         const botRight = if (v2.x < v3.x) v3 else v2;
 
-        // Get screen coordinates
         const screenBotLeftX = self.gameToScreenCoordsX(botLeft.x);
         const screenBotLeftY = self.gameToScreenCoordsY(botLeft.y);
         const screenBotRightX = self.gameToScreenCoordsX(botRight.x);
@@ -504,28 +496,23 @@ pub const Renderer = struct {
         const screenTopX = self.gameToScreenCoordsX(v1.x);
         const screenTopY = self.gameToScreenCoordsY(v1.y);
 
-        // Calculate total distances in screen space
         const leftYDist = screenBotLeftY - screenTopY; // This should be positive
         const rightYDist = screenBotRightY - screenTopY; // This should be positive
 
         const leftXDist = screenBotLeftX - screenTopX;
         const rightXDist = screenBotRightX - screenTopX;
 
-        // Calculate increments
         const leftXInc: f32 = @as(f32, @floatFromInt(leftXDist)) / @as(f32, @floatFromInt(leftYDist));
         const rightXInc: f32 = @as(f32, @floatFromInt(rightXDist)) / @as(f32, @floatFromInt(rightYDist));
 
-        // Start at the top
         var currY = screenTopY;
         var leftX: f32 = @floatFromInt(screenTopX);
         var rightX: f32 = @floatFromInt(screenTopX);
 
-        // Draw from top to bottom
         while (currY <= screenBotLeftY) : (currY += 1) {
             const leftXInt: i32 = @intFromFloat(leftX);
             const rightXInt: i32 = @intFromFloat(rightX);
 
-            // Make sure left is always less than right
             const drawLeft = @min(leftXInt, rightXInt);
             const drawRight = @max(leftXInt, rightXInt);
 

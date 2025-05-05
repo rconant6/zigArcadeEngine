@@ -160,16 +160,21 @@ fn drawTestLines(renderer: *Renderer) void {
 
 fn drawTestTriangles(renderer: *Renderer) void {
     // Flat Top
-    const v1: Point = .{ .x = 1, .y = 1 };
-    const v2: Point = .{ .x = -1, .y = 1 };
+    const v1: Point = .{ .x = 0.5, .y = 1 };
+    const v2: Point = .{ .x = -0.5, .y = 1 };
     const v3: Point = .{ .x = 0, .y = 0 };
     // Flat Bottom
-    const v11: Point = .{ .x = -1, .y = -1 };
-    const v22: Point = .{ .x = 1, .y = -1 };
+    const v11: Point = .{ .x = -0.3, .y = -1 };
+    const v22: Point = .{ .x = 0.3, .y = -1 };
     const v33: Point = .{ .x = 0, .y = 0 };
+    // Non-Flat Triangle
+    const r1: Point = .{ .x = -0.65, .y = -0.8 };
+    const r2: Point = .{ .x = -0.95, .y = 0 };
+    const r3: Point = .{ .x = 0.1, .y = -0.35 };
 
     renderer.drawTriangle(.{ .vertices = .{ v1, v2, v3 } }, Color.init(0.2, 0.5, 0.8, 1), Color.init(0.2, 0.8, 0.5, 1));
     renderer.drawTriangle(.{ .vertices = .{ v11, v22, v33 } }, Color.init(0.2, 0.5, 0.8, 1), Color.init(0.2, 0.8, 0.5, 1));
+    renderer.drawTriangle(.{ .vertices = .{ r1, r2, r3 } }, Color.init(0.2, 0.5, 0.8, 1), Color.init(0.2, 0.8, 0.5, 1));
 }
 
 fn drawTestRects(renderer: *Renderer) void {
