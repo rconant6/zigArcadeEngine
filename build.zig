@@ -19,23 +19,13 @@ pub fn build(b: *std.Build) !void {
     exe.linkFramework("Cocoa");
 
     const keyboard_module = b.createModule(.{
-        .root_source_file = b.path("game/core/bridge.zig"),
+        .root_source_file = b.path("game/bridge.zig"),
     });
     exe.root_module.addImport("keyboard", keyboard_module);
 
     const run_cmd = b.addRunArtifact(exe);
     const run_step = b.step("run", "Run zasteroids");
     run_step.dependOn(&run_cmd.step);
-
-    // Add a keyboard test executable
-    const keyboard_test = b.addExecutable(.{
-        .name = "keyboard_test",
-        .root_source_file = b.path("game/keyboardTest.zig"),
-        .optimize = optimize,
-        .target = target,
-    });
-
-    b.installArtifact(keyboard_test);
 
     b.installArtifact(exe);
 }
