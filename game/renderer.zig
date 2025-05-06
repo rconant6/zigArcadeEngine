@@ -2,14 +2,15 @@ const std = @import("std");
 
 const FrameBuffer = @import("frameBuffer.zig").FrameBuffer;
 
-const prm = @import("primitives.zig");
-const Circle = prm.Circle;
-const Color = prm.Color;
-const Ellipse = prm.Ellipse;
-const Line = prm.Line;
-const Point = prm.Point;
-const Rectangle = prm.Rectangle;
-const Triangle = prm.Triangle;
+const prim = @import("primitives.zig");
+const Circle = prim.Circle;
+const Color = prim.Color;
+const Ellipse = prim.Ellipse;
+const Line = prim.Line;
+const Point = prim.Point;
+const Rectangle = prim.Rectangle;
+const Triangle = prim.Triangle;
+const Polygon = prim.Polygon;
 
 pub const Renderer = struct {
     frameBuffer: FrameBuffer,
@@ -91,11 +92,6 @@ pub const Renderer = struct {
                 }
             },
         }
-    }
-
-    fn sortPointByY(context: void, a: Point, b: Point) bool {
-        _ = context;
-        return a.y > b.y;
     }
 
     // MARK: Point
@@ -414,24 +410,28 @@ pub const Renderer = struct {
     // MARK: Triangle
     pub fn drawTriangle(self: *Renderer, tri: Triangle, fill: ?Color, outline: ?Color) void {
         if (fill) |fc| {
-            self.drawTriangleFilled(&tri.vertices, fc);
+            self.drawTriangleFilled(tri.vertices, fc);
         }
         if (outline) |oc| {
-            self.drawTriangleOutline(&tri.vertices, oc);
+            self.drawOutline(tri.vertices, oc);
         }
     }
 
     fn drawTriangleFilled(self: *Renderer, verts: []const Point, color: Color) void {
-        const sortedVerts = self.allocator.dupe(Point, verts) catch {
-            std.debug.print("Unable to sort vertices for drawing\n", .{});
-            return;
-        };
-        defer self.allocator.free(sortedVerts);
-        std.mem.sort(Point, sortedVerts, {}, sortPointByY);
+        // const sortedVerts = self.allocator.dupe(Point, verts) catch {
+        // std.debug.print("Unable to sort vertices for drawing\n", .{});
+        // return;
+        // };
+        // defer self.allocator.free(sortedVerts);
+        // std.mem.sort(Point, sortedVerts, {}, sortPointByY);
 
-        const v0 = sortedVerts[0];
-        const v1 = sortedVerts[1];
-        const v2 = sortedVerts[2];
+        const v0 = verts[0];
+        const v1 = verts[1];
+        const v2 = verts[2];
+
+        // const v0 = sortedVerts[0];
+        // const v1 = sortedVerts[1];
+        // const v2 = sortedVerts[2];
 
         if (v0.y == v1.y) {
             self.drawFlatTopTriangle(v0, v1, v2, color);
@@ -523,8 +523,35 @@ pub const Renderer = struct {
         }
     }
 
-    fn drawTriangleOutline(self: *Renderer, verts: []const Point, color: Color) void {
+    // MARK: Polygon
+    pub fn drawPolygon(self: *Renderer, poly: Polygon, fill: ?Color, outline: ?Color) void {
+        switch (poly.vertices.len) {
+            0, 1, 2 => {
+                std.debug.print(
+                    "[RENDERER] - drawPolygon: Not enough points (>3) for a polygon: {}\n",
+                    .{poly.vertices.len},
+                );
+                return;
+            },
+            else => {
+                if (fill) |fc| {
+                    self.drawPolygonFilled(poly.vertices, fc);
+                }
+                if (outline) |oc| {
+                    self.drawOutline(poly.vertices, oc);
+                }
+            },
+        }
+    }
+
+    fn drawPolygonOutline(self: *Renderer, verts: []const Point, color: Color) void {
         self.drawOutline(verts, color);
+    }
+
+    fn drawPolygonFilled(self: *Renderer, verts: []const Point, color: Color) void {
+        _ = self;
+        _ = verts;
+        _ = color;
     }
 };
 

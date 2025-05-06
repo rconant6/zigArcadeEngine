@@ -22,6 +22,17 @@ pub const Line = struct {
     }
 };
 
+pub const Triangle = struct {
+    vertices: []Point,
+
+    pub fn init(points: []Point) Triangle {
+        std.mem.sort(Point, points, {}, sortPointByYThenX);
+        return .{
+            .vertices = points,
+        };
+    }
+};
+
 pub const Rectangle = struct {
     center: Point,
     halfWidth: f32,
@@ -72,8 +83,19 @@ pub const Rectangle = struct {
     }
 };
 
-pub const Triangle = struct {
-    vertices: [3]Point,
+pub const Polygon = struct {
+    vertices: []const Point,
+    center: Point,
+
+    pub fn init(points: []Point) Polygon {
+        const center = calculateCentroid(points);
+        const sortContext = PolygonSortContext{ .centroid = center };
+        std.mem.sort(Point, points, sortContext, sortPointsClockwise);
+        return .{
+            .center = center,
+            .vertices = points,
+        };
+    }
 };
 
 pub const Circle = struct {
@@ -106,3 +128,53 @@ pub const Color = struct {
         };
     }
 };
+
+fn sortPointByX(context: void, a: Point, b: Point) bool {
+    _ = context;
+    return a.x > b.x;
+}
+
+fn sortPointByY(context: void, a: Point, b: Point) bool {
+    _ = context;
+    return a.y > b.y;
+}
+
+fn sortPointByYThenX(context: void, a: Point, b: Point) bool {
+    _ = context;
+    if (a.y == b.y) {
+        return a.x < b.x;
+    }
+    return a.y > b.y;
+}
+
+fn calculateCentroid(points: []const Point) Point {
+    if (points.len == 0) return Point{ .x = 0, .y = 0 };
+
+    var sumX: f32 = 0;
+    var sumY: f32 = 0;
+
+    for (points) |p| {
+        sumX += p.x;
+        sumY += p.y;
+    }
+
+    const flen: f32 = @floatFromInt(points.len);
+
+    return Point{
+        .x = sumX / flen,
+        .y = sumY / flen,
+    };
+}
+
+const PolygonSortContext = struct {
+    centroid: Point,
+};
+
+fn sortPointsClockwise(context: PolygonSortContext, a: Point, b: Point) bool {
+    const center = context.centroid;
+
+    const angleA = std.math.atan2(a.y - center.y, a.x - center.x);
+    const angleB = std.math.atan2(b.y - center.y, b.x - center.x);
+
+    return angleA > angleB;
+}

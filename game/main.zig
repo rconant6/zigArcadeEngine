@@ -12,6 +12,8 @@ const Color = prim.Color;
 const Line = prim.Line;
 const Point = prim.Point;
 const Rectangle = prim.Rectangle;
+const Triangle = prim.Triangle;
+const Polygon = prim.Polygon;
 
 const TARGET_FPS: f32 = 60.0;
 const TARGET_FRAME_TIME_NS: i64 = @intFromFloat((1.0 / TARGET_FPS) * std.time.ns_per_s);
@@ -87,9 +89,10 @@ pub fn main() !void {
         renderer.beginFrame();
 
         // Test shape drawing on the renderer
-        drawTestRects(&renderer);
+        // drawTestRects(&renderer);
         drawTestLines(&renderer);
-        drawTestTriangles(&renderer);
+        // drawTestTriangles(&renderer);
+        drawTestPolygons(&renderer);
 
         renderer.endFrame();
 
@@ -114,8 +117,85 @@ pub fn main() !void {
     std.debug.print("Application shutting down\n", .{});
 }
 
-fn drawTestLines(renderer: *Renderer) void {
+fn drawTestPolygons(renderer: *Renderer) void {
+    // 3 sided
+    const t1: Point = .{ .x = -0.85, .y = 0.95 };
+    const t2: Point = .{ .x = -0.95, .y = 0.75 };
+    const t3: Point = .{ .x = -0.65, .y = 0.85 };
+    var points = [_]Point{ t1, t2, t3 };
+    const triPoly = Polygon.init(&points);
+    renderer.drawPolygon(triPoly, null, Color.init(0.2, 0.3, 0.9, 1));
+
+    // 4 sided
+    const f1: Point = .{ .x = 0.45, .y = 0.95 };
+    const f2: Point = .{ .x = 0.55, .y = 0.95 };
+    const f3: Point = .{ .x = 0.75, .y = 0.1 };
+    const f4: Point = .{ .x = 0.25, .y = 0.1 };
+    var points2 = [_]Point{ f2, f1, f3, f4 };
+    const quadPoly = Polygon.init(&points2);
+    renderer.drawPolygon(quadPoly, null, Color.init(0.5, 0.9, 0.7, 1));
+
+    // 5 sided
+    const p1: Point = .{ .x = -0.7, .y = -0.5 }; // top point
+    const p2: Point = .{ .x = -0.85, .y = -0.65 };
+    const p3: Point = .{ .x = -0.75, .y = -0.85 };
+    const p4: Point = .{ .x = -0.55, .y = -0.85 };
+    const p5: Point = .{ .x = -0.45, .y = -0.65 };
+    var points3 = [_]Point{ p1, p2, p3, p4, p5 };
+    const pentaPoly = Polygon.init(&points3);
+    renderer.drawPolygon(pentaPoly, Color.init(0.6, 0.2, 0.8, 1), Color.init(0.8, 0.4, 0.9, 1));
+
+    // 10 sided
+    const d1: Point = .{ .x = 0.75, .y = -0.5 }; // top point
+    const d2: Point = .{ .x = 0.64, .y = -0.59 };
+    const d3: Point = .{ .x = 0.57, .y = -0.71 };
+    const d4: Point = .{ .x = 0.57, .y = -0.83 };
+    const d5: Point = .{ .x = 0.65, .y = -0.91 };
+    const d6: Point = .{ .x = 0.75, .y = -0.94 };
+    const d7: Point = .{ .x = 0.85, .y = -0.91 };
+    const d8: Point = .{ .x = 0.93, .y = -0.83 };
+    const d9: Point = .{ .x = 0.93, .y = -0.71 };
+    const d10: Point = .{ .x = 0.86, .y = -0.59 };
+    var points4 = [_]Point{ d1, d2, d3, d4, d5, d6, d7, d8, d9, d10 };
+    const decaPoly = Polygon.init(&points4);
+    renderer.drawPolygon(decaPoly, Color.init(0.3, 0.7, 0.4, 1), Color.init(0.1, 0.5, 0.2, 1));
+
+    // 12
+    const x1: Point = .{ .x = 0.1, .y = 0.3 };
+    const x2: Point = .{ .x = 0.25, .y = 0.15 };
+    const x3: Point = .{ .x = 0.32, .y = -0.05 };
+    const x4: Point = .{ .x = 0.28, .y = -0.22 };
+    const x5: Point = .{ .x = 0.18, .y = -0.35 };
+    const x6: Point = .{ .x = 0.02, .y = -0.38 };
+    const x7: Point = .{ .x = -0.15, .y = -0.33 };
+    const x8: Point = .{ .x = -0.27, .y = -0.25 };
+    const x9: Point = .{ .x = -0.35, .y = -0.1 };
+    const x10: Point = .{ .x = -0.3, .y = 0.08 };
+    const x11: Point = .{ .x = -0.2, .y = 0.2 };
+    const x12: Point = .{ .x = -0.05, .y = 0.28 };
+    var points5 = [_]Point{ x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12 };
+    const irregPoly = Polygon.init(&points5);
+    renderer.drawPolygon(irregPoly, Color.init(0.8, 0.6, 0.1, 1), Color.init(1.0, 0.8, 0.2, 1));
+}
+
+fn drawTestCircles(renderer: *Renderer) void {
     const radius = 0.56;
+    const center: Point = .{ .x = 0, .y = 0 }; // Center of screen
+    const centerCircle: Circle = .{ .origin = center, .radius = radius };
+    renderer.drawCircle(centerCircle, Color.init(1, 0.5, 0.8, 1), Color.init(0.75, 0.75, 0.75, 1));
+    const radius2 = 0.15;
+    renderer.drawCircle(
+        .{ .origin = .{ .x = -0.25, .y = -0.25 }, .radius = radius2 },
+        null,
+        Color.init(0.85, 0, 1, 1),
+    );
+    renderer.drawCircle(
+        .{ .origin = .{ .x = 0.50, .y = 0.50 }, .radius = radius2 },
+        Color.init(0.85, 0.5, 1, 1),
+        null,
+    );
+}
+fn drawTestLines(renderer: *Renderer) void {
     const center: Point = .{ .x = 0, .y = 0 }; // Center of screen
     const topLeft: Point = .{ .x = -1, .y = 1 }; // Top-left corner
     const topRight: Point = .{ .x = 1, .y = 1 }; // Top-right corner
@@ -134,21 +214,6 @@ fn drawTestLines(renderer: *Renderer) void {
     const diagEnd2: Point = .{ .x = 0.375, .y = 0.666 };
     // const diagLine: Line = .{ .start = diagEnd, .end = diagStart };
     // const diagLine2: Line = .{ .start = diagStart2, .end = diagEnd2 };
-
-    const centerCircle: Circle = .{ .origin = center, .radius = radius };
-    renderer.drawCircle(centerCircle, Color.init(1, 0.5, 0.8, 1), Color.init(0.75, 0.75, 0.75, 1));
-    const radius2 = 0.15;
-    renderer.drawCircle(
-        .{ .origin = .{ .x = -0.25, .y = -0.25 }, .radius = radius2 },
-        null,
-        Color.init(0.85, 0, 1, 1),
-    );
-    renderer.drawCircle(
-        .{ .origin = .{ .x = 0.50, .y = 0.50 }, .radius = radius2 },
-        Color.init(0.85, 0.5, 1, 1),
-        null,
-    );
-
     renderer.drawLine(diagStart, diagEnd, Color.init(0, 0, 0, 1));
     // renderer.drawLine(diagLine, Color.init(0.25, 0.25, 0.25, 1));
     renderer.drawLine(diagStart2, diagEnd2, Color.init(0, 0, 0, 1));
@@ -166,27 +231,33 @@ fn drawTestTriangles(renderer: *Renderer) void {
     const v1: Point = .{ .x = 0.5, .y = 1 };
     const v2: Point = .{ .x = -0.5, .y = 1 };
     const v3: Point = .{ .x = 0, .y = 0 };
+    var points = [_]Point{ v1, v2, v3 };
+    const t1 = Triangle.init(&points);
     // Flat Bottom
     const v11: Point = .{ .x = -0.3, .y = -1 };
     const v22: Point = .{ .x = 0.3, .y = -1 };
     const v33: Point = .{ .x = 0, .y = 0 };
+    var points2 = [_]Point{ v11, v22, v33 };
+    const t2 = Triangle.init(&points2);
     // Non-Flat Triangle
     const r1: Point = .{ .x = -0.65, .y = -0.8 };
     const r2: Point = .{ .x = -0.95, .y = 0 };
     const r3: Point = .{ .x = 0.1, .y = -0.35 };
+    var points3 = [_]Point{ r1, r2, r3 };
+    const t3 = Triangle.init(&points3);
 
     renderer.drawTriangle(
-        .{ .vertices = .{ v1, v2, v3 } },
+        t1,
         Color.init(0.2, 0.5, 0.8, 1),
         Color.init(0.2, 0.8, 0.5, 1),
     );
     renderer.drawTriangle(
-        .{ .vertices = .{ v11, v22, v33 } },
+        t2,
         Color.init(0.2, 0.5, 0.8, 1),
         Color.init(0.2, 0.8, 0.5, 1),
     );
     renderer.drawTriangle(
-        .{ .vertices = .{ r1, r2, r3 } },
+        t3,
         Color.init(0.2, 0.5, 0.8, 1),
         Color.init(0.2, 0.8, 0.5, 1),
     );
