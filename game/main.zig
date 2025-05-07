@@ -3,9 +3,11 @@ const bge = @import("bridge.zig");
 const gsm = @import("gameStateManager.zig");
 const gss = @import("gameStates.zig");
 const prim = @import("primitives.zig");
+const rend = @import("renderer.zig");
 
 const KeyCodes = bge.GameKeyCode;
-const Renderer = @import("renderer.zig").Renderer;
+const Renderer = rend.Renderer;
+const ScreenPoint = rend.ScreenPoint;
 
 const Circle = prim.Circle;
 const Color = prim.Color;
@@ -269,3 +271,5 @@ fn drawTestRects(renderer: *Renderer) void {
     renderer.drawRectangle(rect, Color.init(1, 1, 1, 1), Color.init(1, 1, 1, 1));
     renderer.drawRectangle(square, Color.init(0, 1, 1, 1), Color.init(0, 1, 1, 1));
 }
+
+

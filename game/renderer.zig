@@ -50,29 +50,52 @@ pub const Renderer = struct {
         self.frameBuffer.clear(self.clearColor);
     }
 
+    pub fn setClearColor(self: *Renderer, color: Color) void {
+        self.clearColor = color;
+    }
+
     // MARK: Drawing
-    fn gameToScreenCoordsFromXY(self: *const Renderer, x: f32, y: f32) ScreenPoint {
-        // const fw: f32 = @floatFromInt(self.width);
-        // const fh: f32 = @floatFromInt(self.height);
+    fn gameToScreenFromXY(self: *const Renderer, x: f32, y: f32) ScreenPoint {
         const screenX: i32 = @intFromFloat((x + 1.0) * 0.5 * self.fw);
         const screenY: i32 = @intFromFloat((1.0 - y) * 0.5 * self.fh);
 
         return .{ .x = screenX, .y = screenY };
     }
 
-    fn gameToScreenCoordsX(self: *const Renderer, x: f32) i32 {
+    fn gameToScreenX(self: *const Renderer, x: f32) i32 {
         const fw: f32 = @floatFromInt(self.width);
         return @intFromFloat((x + 1.0) * 0.5 * fw);
     }
-    fn gameToScreenCoordsY(self: *const Renderer, y: f32) i32 {
+    fn gameToScreenY(self: *const Renderer, y: f32) i32 {
         const fh: f32 = @floatFromInt(self.height);
         return @intFromFloat((1.0 - y) * 0.5 * fh);
     }
 
-    inline fn gameToScreenCoordsFromPoint(self: *const Renderer, point: Point) ScreenPoint {
-        return self.gameToScreenCoordsFromXY(point.x, point.y);
+    pub fn gameToScreen(self: *const Renderer, p: Point) ScreenPoint {
+        return self.gameToScreenFromXY(p.x, p.y);
     }
 
+    pub fn screenToGame(self: *const Renderer, sp: ScreenPoint) Point {
+        return self.screenToGameXY(sp.x, sp.y);
+    }
+
+    pub fn screenToGameXY(self: *const Renderer, screenX: i32, screenY: i32) Point {
+        return Point{
+            .x = (@as(f32, @floatFromInt(screenX)) * 2.0 / self.fw) - 1.0,
+            .y = 1.0 - (@as(f32, @floatFromInt(screenY)) * 2.0 / self.fh),
+        };
+    }
+    //
+    // fn gameToScreenCoordsFromPoint(self: *const Renderer, point: Point) ScreenPoint {
+    //     return self.gameToScreenFromXY(point.x, point.y);
+    // }
+
+    /// Returns the current front buffer containing the most recently completed frame.
+    ///
+    /// This is typically used to pass the rendered content to the display system.
+    ///
+    /// Returns:
+    ///     A slice containing the frame buffer's pixel data
     pub fn getRawFrameBuffer(self: *const Renderer) []const Color {
         return self.frameBuffer.frontBuffer;
     }
@@ -95,10 +118,19 @@ pub const Renderer = struct {
     }
 
     // MARK: Point
+    /// Draws a single point in game space.
+    ///
+    /// Parameters:
+    ///     point: The point to draw in game space coordinates (-1,1)
+    ///     color: Optional color for the point. If null, nothing is drawn
+    ///
+    /// Example:
+    ///     // Draw a red point at the center of the screen
+    ///     renderer.drawPoint(Point{ .x = 0, .y = 0 }, Color.init(1, 0, 0, 1));
     pub fn drawPoint(self: *Renderer, point: Point, color: ?Color) void {
         const c = if (color != null) color.? else return;
 
-        const screenPos = self.gameToScreenCoordsFromPoint(point);
+        const screenPos = self.gameToScreen(point);
 
         if (screenPos.x < 0 or screenPos.x >= self.width or
             screenPos.y < 0 or screenPos.y >= self.height)
@@ -133,8 +165,8 @@ pub const Renderer = struct {
     pub fn drawLine(self: *Renderer, start: Point, end: Point, color: ?Color) void {
         const c = if (color != null) color.? else return;
 
-        const screenStart = self.gameToScreenCoordsFromPoint(start);
-        const screenEnd = self.gameToScreenCoordsFromPoint(end);
+        const screenStart = self.gameToScreen(start);
+        const screenEnd = self.gameToScreen(end);
 
         if (screenStart.isSamePoint(screenEnd)) return self.drawPoint(start, c);
         var x = screenStart.x;
@@ -142,19 +174,15 @@ pub const Renderer = struct {
         const endX = screenEnd.x;
         const endY = screenEnd.y;
 
-        // Get the differences
         var dx = screenEnd.x - screenStart.x;
         var dy = screenEnd.y - screenStart.y;
 
-        // Determine the sign of the increments
         const stepX: i32 = if (dx < 0) -1 else 1;
         const stepY: i32 = if (dy < 0) -1 else 1;
 
-        // Make dx, dy positive for calculations
         dx = @intCast(@abs(dx));
         dy = @intCast(@abs(dy));
 
-        // Special cases for horizontal, vertical, and diagonal can stay as they are
         if (dx == 0) {
             // Handle vertical case
             while (y != endY) : (y += stepY) {
@@ -177,7 +205,6 @@ pub const Renderer = struct {
             var err: i32 = 0;
 
             if (dx > dy) {
-                // x-dominant case
                 err = @divFloor(dx, 2);
 
                 while (x != endX + stepX) {
@@ -194,7 +221,6 @@ pub const Renderer = struct {
                     x += stepX;
                 }
             } else {
-                // y-dominant case
                 err = @divFloor(dy, 2);
 
                 while (y != endY + stepY) {
@@ -251,7 +277,7 @@ pub const Renderer = struct {
 
     fn drawHorizontalScanLineF32(self: *Renderer, y: f32, startx: f32, endx: f32, color: Color) void {
         const start = self.gameToScreenCoordsFromPoint(startx, y);
-        const end = self.gameToScreenCoordsFromXY(endx, y);
+        const end = self.gameToScreenFromXY(endx, y);
 
         self.drawHorizontalScanLineInt(start.y, start.x, end.x, color);
     }
@@ -270,7 +296,7 @@ pub const Renderer = struct {
 
     fn drawCircleFilled(self: *Renderer, circle: Circle, color: Color) void {
         const center = self.gameToScreenCoordsFromPoint(circle.origin);
-        const edgeScreen = self.gameToScreenCoordsFromXY(circle.origin.x + circle.radius, circle.origin.y);
+        const edgeScreen = self.gameToScreenFromXY(circle.origin.x + circle.radius, circle.origin.y);
         const screenRadius: i32 = edgeScreen.x - center.x;
 
         var x: i32 = 0;
@@ -313,7 +339,7 @@ pub const Renderer = struct {
 
     fn drawCircleOutline(self: *Renderer, circle: Circle, color: Color) void {
         const center = self.gameToScreenCoordsFromPoint(circle.origin);
-        const edgeScreen = self.gameToScreenCoordsFromXY(circle.origin.x + circle.radius, circle.origin.y);
+        const edgeScreen = self.gameToScreenFromXY(circle.origin.x + circle.radius, circle.origin.y);
         const screenRadius: i32 = edgeScreen.x - center.x;
 
         var x: i32 = 0;
@@ -373,7 +399,6 @@ pub const Renderer = struct {
         }
     }
     fn drawRectFilled(self: *Renderer, rect: Rectangle, color: Color) void {
-        // TODO: can this be optimized? (setmem style?)
         const corners = rect.getCorners();
 
         const topLeft = self.gameToScreenCoordsFromPoint(corners[0]);
@@ -408,6 +433,38 @@ pub const Renderer = struct {
     }
 
     // MARK: Triangle
+    /// Draws a triangle in game space with optional fill and outline colors.
+    ///
+    /// This function renders a triangle defined by three vertices in game space
+    /// coordinates (-1,1). The triangle can be filled, outlined, or both depending
+    /// on which color parameters are provided.
+    ///
+    /// Parameters:
+    ///     self: Pointer to the Renderer instance
+    ///     tri: Triangle structure containing three vertices
+    ///     fill: Optional color for filling the triangle. If null, no fill is drawn
+    ///     outline: Optional color for the triangle outline. If null, no outline is drawn
+    ///
+    /// Example:
+    ///     // Define triangle vertices
+    ///     var points = [_]Point{
+    ///         Point{ .x = 0.0, .y = 0.5 },    // Top vertex
+    ///         Point{ .x = -0.5, .y = -0.5 },  // Bottom-left vertex
+    ///         Point{ .x = 0.5, .y = -0.5 },   // Bottom-right vertex
+    ///     };
+    ///     // Create a triangle
+    ///     const tri = Triangle.init(&points);
+    ///
+    ///     // Draw a green filled triangle with a white outline
+    ///     renderer.drawTriangle(tri, Color.init(0, 1, 0, 1), Color.init(1, 1, 1, 1));
+    ///
+    ///     // Draw a triangle with only an outline
+    ///     renderer.drawTriangle(tri, null, Color.init(1, 0, 0, 1));
+    ///
+    /// Notes:
+    ///     - The triangle vertices are automatically sorted for efficient rendering
+    ///     - The triangle is automatically clipped if it extends beyond screen boundaries
+    ///     - Special optimizations are applied for flat-top and flat-bottom triangles
     pub fn drawTriangle(self: *Renderer, tri: Triangle, fill: ?Color, outline: ?Color) void {
         if (fill) |fc| {
             self.drawTriangleFilled(tri.vertices, fc);
@@ -418,20 +475,9 @@ pub const Renderer = struct {
     }
 
     fn drawTriangleFilled(self: *Renderer, verts: []const Point, color: Color) void {
-        // const sortedVerts = self.allocator.dupe(Point, verts) catch {
-        // std.debug.print("Unable to sort vertices for drawing\n", .{});
-        // return;
-        // };
-        // defer self.allocator.free(sortedVerts);
-        // std.mem.sort(Point, sortedVerts, {}, sortPointByY);
-
         const v0 = verts[0];
         const v1 = verts[1];
         const v2 = verts[2];
-
-        // const v0 = sortedVerts[0];
-        // const v1 = sortedVerts[1];
-        // const v2 = sortedVerts[2];
 
         if (v0.y == v1.y) {
             self.drawFlatTopTriangle(v0, v1, v2, color);
@@ -452,12 +498,12 @@ pub const Renderer = struct {
         const topLeft = if (v1.x < v2.x) v1 else v2;
         const topRight = if (v1.x < v2.x) v2 else v1;
 
-        const screenTopLeftX = self.gameToScreenCoordsX(topLeft.x);
-        const screenTopLeftY = self.gameToScreenCoordsY(topLeft.y);
-        const screenTopRightX = self.gameToScreenCoordsX(topRight.x);
-        const screenTopRightY = self.gameToScreenCoordsY(topRight.y);
-        const screenBottomX = self.gameToScreenCoordsX(v3.x);
-        const screenBottomY = self.gameToScreenCoordsY(v3.y);
+        const screenTopLeftX = self.gameToScreenX(topLeft.x);
+        const screenTopLeftY = self.gameToScreenY(topLeft.y);
+        const screenTopRightX = self.gameToScreenX(topRight.x);
+        const screenTopRightY = self.gameToScreenY(topRight.y);
+        const screenBottomX = self.gameToScreenX(v3.x);
+        const screenBottomY = self.gameToScreenY(v3.y);
 
         const leftYDist = screenBottomY - screenTopLeftY;
         const rightYDist = screenBottomY - screenTopRightY;
@@ -483,18 +529,19 @@ pub const Renderer = struct {
             rightX += rightXInc;
         }
     }
+
     fn drawFlatBottomTriangle(self: *Renderer, v1: Point, v2: Point, v3: Point, color: Color) void {
         std.debug.assert(v2.y == v3.y);
 
         const botLeft = if (v2.x < v3.x) v2 else v3;
         const botRight = if (v2.x < v3.x) v3 else v2;
 
-        const screenBotLeftX = self.gameToScreenCoordsX(botLeft.x);
-        const screenBotLeftY = self.gameToScreenCoordsY(botLeft.y);
-        const screenBotRightX = self.gameToScreenCoordsX(botRight.x);
-        const screenBotRightY = self.gameToScreenCoordsY(botRight.y);
-        const screenTopX = self.gameToScreenCoordsX(v1.x);
-        const screenTopY = self.gameToScreenCoordsY(v1.y);
+        const screenBotLeftX = self.gameToScreenX(botLeft.x);
+        const screenBotLeftY = self.gameToScreenY(botLeft.y);
+        const screenBotRightX = self.gameToScreenX(botRight.x);
+        const screenBotRightY = self.gameToScreenY(botRight.y);
+        const screenTopX = self.gameToScreenX(v1.x);
+        const screenTopY = self.gameToScreenY(v1.y);
 
         const leftYDist = screenBotLeftY - screenTopY; // This should be positive
         const rightYDist = screenBotRightY - screenTopY; // This should be positive
@@ -527,10 +574,6 @@ pub const Renderer = struct {
     pub fn drawPolygon(self: *Renderer, poly: Polygon, fill: ?Color, outline: ?Color) void {
         switch (poly.vertices.len) {
             0, 1, 2 => {
-                std.debug.print(
-                    "[RENDERER] - drawPolygon: Not enough points (>3) for a polygon: {}\n",
-                    .{poly.vertices.len},
-                );
                 return;
             },
             else => {
@@ -558,7 +601,6 @@ pub const Renderer = struct {
         for (0..verts.len) |i| {
             sortedVerts = .{ center, verts[i], verts[(i + 1) % verts.len] };
             std.mem.sort(Point, &sortedVerts, {}, sortPointByY);
-            // self.drawOutline(&.{ center, verts[i], verts[(i + 1) % verts.len] }, Color.init(1, 1, 1, 1));
             self.drawTriangleFilled(&sortedVerts, color);
         }
     }
@@ -570,7 +612,7 @@ fn sortPointByY(context: void, a: Point, b: Point) bool {
 }
 
 // MARK: Types
-const ScreenPoint = struct {
+pub const ScreenPoint = struct {
     x: i32,
     y: i32,
 

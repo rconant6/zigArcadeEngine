@@ -1,5 +1,15 @@
 const std = @import("std");
 
+/// Represents a 2D point in game space with x and y coordinates.
+///
+/// Points use floating-point coordinates in the range of -1.0 to 1.0 for both axes,
+/// where (0,0) is the center of the screen. The top-right corner is at (1,1) and
+/// the bottom-left corner is at (-1,-1).
+///
+/// Example:
+///     const centerPoint = Point{ .x = 0, .y = 0 };     // Center of screen
+///     const topRight = Point{ .x = 1, .y = 1 };        // Top-right corner
+///     const customPoint = Point.init(0.5, -0.3);       // Using the init helper
 pub const Point = struct {
     x: f32,
     y: f32,
@@ -13,6 +23,16 @@ pub const Point = struct {
     // }
 };
 
+/// Represents a line segment between two points in game space.
+///
+/// Lines are defined by their start and end points, each using the game space
+/// coordinate system (-1,1).
+///
+/// Example:
+///     const horizontalLine = Line{
+///         .start = Point{ .x = -1, .y = 0 },
+///         .end = Point{ .x = 1, .y = 0 },
+///     };
 pub const Line = struct {
     start: Point,
     end: Point,
@@ -22,9 +42,25 @@ pub const Line = struct {
     }
 };
 
+/// Represents a triangle defined by three vertices in game space.
+///
+/// The vertices are automatically sorted by y-coordinate to facilitate
+/// rendering. This makes drawing filled triangles more efficient.
+///
+/// Example:
+///     var points = [_]Point{
+///         Point{ .x = 0, .y = 0.5 },     // Top vertex
+///         Point{ .x = -0.5, .y = -0.5 }, // Bottom-left vertex
+///         Point{ .x = 0.5, .y = -0.5 },  // Bottom-right vertex
+///     };
+///     const triangle = Triangle.init(&points);
 pub const Triangle = struct {
     vertices: []Point,
 
+    /// Creates a new Triangle with the given points.
+    ///
+    /// The points are automatically sorted by y-coordinate (and then by x
+    /// if y values are equal) to facilitate the rendering process.
     pub fn init(points: []Point) Triangle {
         std.mem.sort(Point, points, {}, sortPointByYThenX);
         return .{
@@ -33,6 +69,18 @@ pub const Triangle = struct {
     }
 };
 
+/// Represents a rectangle in game space.
+///
+/// Rectangles are defined by a center point and half-dimensions, making it
+/// easy to perform transformations and collision checks. The coordinate system
+/// uses the (-1,1) range for both axes.
+///
+/// Example:
+///     // Create a square centered at origin with width and height of 0.5
+///     const square = Rectangle.initSquare(Point{ .x = 0, .y = 0 }, 0.5);
+///
+///     // Create a rectangle centered at (0.2, 0.3) with width 0.4 and height 0.6
+///     const rect = Rectangle.initFromCenter(Point{ .x = 0.2, .y = 0.3 }, 0.4, 0.6);
 pub const Rectangle = struct {
     center: Point,
     halfWidth: f32,
@@ -83,10 +131,30 @@ pub const Rectangle = struct {
     }
 };
 
+/// Represents a polygon with any number of vertices in game space.
+///
+/// Polygons are defined by an array of vertices and maintain a calculated
+/// center point. The vertices are automatically sorted in clockwise order
+/// around the centroid for proper rendering.
+///
+/// Example:
+///     // Create a pentagon
+///     var points = [_]Point{
+///         Point{ .x = 0.0, .y = 0.5 },
+///         Point{ .x = 0.4, .y = 0.2 },
+///         Point{ .x = 0.3, .y = -0.3 },
+///         Point{ .x = -0.3, .y = -0.3 },
+///         Point{ .x = -0.4, .y = 0.2 },
+///     };
+///     const pentagon = Polygon.init(&points);
 pub const Polygon = struct {
     vertices: []const Point,
     center: Point,
 
+    /// Creates a new Polygon with the given points.
+    ///
+    /// The center (centroid) is automatically calculated, and the vertices
+    /// are sorted in clockwise order around this center.
     pub fn init(points: []Point) Polygon {
         const center = calculateCentroid(points);
         const sortContext = PolygonSortContext{ .centroid = center };
@@ -98,6 +166,17 @@ pub const Polygon = struct {
     }
 };
 
+/// Represents a circle in game space.
+///
+/// Circles are defined by an origin point and a radius. Coordinates
+/// use the (-1,1) range for both axes.
+///
+/// Example:
+///     // Create a circle at the center of the screen with radius 0.5
+///     const circle = Circle{
+///         .origin = Point{ .x = 0, .y = 0 },
+///         .radius = 0.5,
+///     };
 pub const Circle = struct {
     origin: Point,
     radius: f32,
@@ -109,6 +188,16 @@ pub const Ellipse = struct {
     semiMajor: f32,
 };
 
+/// Represents a color with red, green, blue, and alpha channels.
+///
+/// Color components are stored as normalized floating-point values (0.0 to 1.0).
+/// The alpha channel controls transparency, where 0.0 is fully transparent
+/// and 1.0 is fully opaque.
+///
+/// Example:
+///     const red = Color.init(1, 0, 0, 1);         // Opaque red
+///     const transparentBlue = Color.init(0, 0, 1, 0.5); // Semi-transparent blue
+///     const fromBytes = Color.initFromInt(255, 128, 0, 255); // Orange from byte values
 pub const Color = struct {
     r: f32,
     g: f32,
