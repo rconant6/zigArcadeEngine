@@ -124,7 +124,7 @@ fn drawTestPolygons(renderer: *Renderer) void {
     const t3: Point = .{ .x = -0.65, .y = 0.85 };
     var points = [_]Point{ t1, t2, t3 };
     const triPoly = Polygon.init(&points);
-    renderer.drawPolygon(triPoly, null, Color.init(0.2, 0.3, 0.9, 1));
+    renderer.drawPolygon(triPoly, Color.init(0.5, 0.55, 0.43, 1), Color.init(0.2, 0.3, 0.9, 1));
 
     // 4 sided
     const f1: Point = .{ .x = 0.45, .y = 0.95 };
@@ -133,7 +133,7 @@ fn drawTestPolygons(renderer: *Renderer) void {
     const f4: Point = .{ .x = 0.25, .y = 0.1 };
     var points2 = [_]Point{ f2, f1, f3, f4 };
     const quadPoly = Polygon.init(&points2);
-    renderer.drawPolygon(quadPoly, null, Color.init(0.5, 0.9, 0.7, 1));
+    renderer.drawPolygon(quadPoly, Color.init(0.7, 0.4, 0.9, 1), Color.init(0.5, 0.9, 0.7, 1));
 
     // 5 sided
     const p1: Point = .{ .x = -0.7, .y = -0.5 }; // top point

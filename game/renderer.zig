@@ -535,7 +535,7 @@ pub const Renderer = struct {
             },
             else => {
                 if (fill) |fc| {
-                    self.drawPolygonFilled(poly.vertices, fc);
+                    self.drawPolygonFilled(poly.vertices, poly.center, fc);
                 }
                 if (outline) |oc| {
                     self.drawOutline(poly.vertices, oc);
@@ -548,12 +548,26 @@ pub const Renderer = struct {
         self.drawOutline(verts, color);
     }
 
-    fn drawPolygonFilled(self: *Renderer, verts: []const Point, color: Color) void {
-        _ = self;
-        _ = verts;
-        _ = color;
+    fn drawPolygonFilled(self: *Renderer, verts: []const Point, center: Point, color: Color) void {
+        var sortedVerts: [3]Point = undefined;
+
+        if (verts.len == 3) {
+            self.drawTriangleFilled(verts, color);
+            return;
+        }
+        for (0..verts.len) |i| {
+            sortedVerts = .{ center, verts[i], verts[(i + 1) % verts.len] };
+            std.mem.sort(Point, &sortedVerts, {}, sortPointByY);
+            // self.drawOutline(&.{ center, verts[i], verts[(i + 1) % verts.len] }, Color.init(1, 1, 1, 1));
+            self.drawTriangleFilled(&sortedVerts, color);
+        }
     }
 };
+
+fn sortPointByY(context: void, a: Point, b: Point) bool {
+    _ = context;
+    return a.y > b.y;
+}
 
 // MARK: Types
 const ScreenPoint = struct {
