@@ -1,27 +1,7 @@
 const std = @import("std");
+const rTypes = @import("types.zig");
 
-/// Represents a 2D point in game space with x and y coordinates.
-///
-/// Points use floating-point coordinates in the range of -1.0 to 1.0 for both axes,
-/// where (0,0) is the center of the screen. The top-right corner is at (1,1) and
-/// the bottom-left corner is at (-1,-1).
-///
-/// Example:
-///     const centerPoint = Point{ .x = 0, .y = 0 };     // Center of screen
-///     const topRight = Point{ .x = 1, .y = 1 };        // Top-right corner
-///     const customPoint = Point.init(0.5, -0.3);       // Using the init helper
-pub const Point = struct {
-    x: f32,
-    y: f32,
-
-    pub fn init(x: f32, y: f32) Point {
-        return .{ .x = x, .y = y };
-    }
-
-    // pub fn toVec2(self: Point) Vec2 {
-    //     return Vec2{ self.x, self.y };
-    // }
-};
+const Point = rTypes.GamePoint;
 
 /// Represents a line segment between two points in game space.
 ///
@@ -57,10 +37,7 @@ pub const Line = struct {
 pub const Triangle = struct {
     vertices: []Point,
 
-    /// Creates a new Triangle with the given points.
-    ///
-    /// The points are automatically sorted by y-coordinate (and then by x
-    /// if y values are equal) to facilitate the rendering process.
+    /// Points are sorted from top to bottm via y, and then left to right via x for rendering
     pub fn init(points: []Point) Triangle {
         std.mem.sort(Point, points, {}, sortPointByYThenX);
         return .{
@@ -186,36 +163,6 @@ pub const Ellipse = struct {
     origin: Point,
     semiMinor: f32,
     semiMajor: f32,
-};
-
-/// Represents a color with red, green, blue, and alpha channels.
-///
-/// Color components are stored as normalized floating-point values (0.0 to 1.0).
-/// The alpha channel controls transparency, where 0.0 is fully transparent
-/// and 1.0 is fully opaque.
-///
-/// Example:
-///     const red = Color.init(1, 0, 0, 1);         // Opaque red
-///     const transparentBlue = Color.init(0, 0, 1, 0.5); // Semi-transparent blue
-///     const fromBytes = Color.initFromInt(255, 128, 0, 255); // Orange from byte values
-pub const Color = struct {
-    r: f32,
-    g: f32,
-    b: f32,
-    a: f32,
-
-    pub fn init(r: f32, g: f32, b: f32, a: f32) Color {
-        return .{ .r = r, .g = g, .b = b, .a = a };
-    }
-
-    pub fn initFromInt(r: u8, g: u8, b: u8, a: u8) Color {
-        return .{
-            .r = @as(f32, @floatFromInt(r)) / 255.0,
-            .g = @as(f32, @floatFromInt(g)) / 255.0,
-            .b = @as(f32, @floatFromInt(b)) / 255.0,
-            .a = @as(f32, @floatFromInt(a)) / 255.0,
-        };
-    }
 };
 
 fn sortPointByX(context: void, a: Point, b: Point) bool {

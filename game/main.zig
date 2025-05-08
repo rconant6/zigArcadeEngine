@@ -1,27 +1,27 @@
 const std = @import("std");
-const bge = @import("bridge.zig");
 const gsm = @import("gameStateManager.zig");
 const gss = @import("gameStates.zig");
-const prim = @import("primitives.zig");
-const rend = @import("renderer.zig");
 
+const bge = @import("bridge.zig");
 const KeyCodes = bge.GameKeyCode;
+
+const rend = @import("renderer.zig");
+const Circle = rend.Circle;
+const Color = rend.Color;
+const Line = rend.Line;
+const Point = rend.Point;
+const Rectangle = rend.Rectangle;
 const Renderer = rend.Renderer;
 const ScreenPoint = rend.ScreenPoint;
-
-const Circle = prim.Circle;
-const Color = prim.Color;
-const Line = prim.Line;
-const Point = prim.Point;
-const Rectangle = prim.Rectangle;
-const Triangle = prim.Triangle;
-const Polygon = prim.Polygon;
+const Triangle = rend.Triangle;
+const Polygon = rend.Polygon;
 
 const TARGET_FPS: f32 = 60.0;
 const TARGET_FRAME_TIME_NS: i64 = @intFromFloat((1.0 / TARGET_FPS) * std.time.ns_per_s);
 const F32_NS_PER_S: f32 = @floatFromInt(std.time.ns_per_s);
 const WIDTH: i32 = 1600;
 const HEIGHT: i32 = 900;
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -91,10 +91,12 @@ pub fn main() !void {
         renderer.beginFrame();
 
         // Test shape drawing on the renderer
-        // drawTestRects(&renderer);
+        renderer.drawPoint(.{ .x = 0, .y = 0 }, Color.init(0, 0, 0, 1));
+        drawTestRects(&renderer);
         drawTestLines(&renderer);
-        // drawTestTriangles(&renderer);
+        drawTestTriangles(&renderer);
         drawTestPolygons(&renderer);
+        drawTestCircles(&renderer);
 
         renderer.endFrame();
 
@@ -109,7 +111,7 @@ pub fn main() !void {
 
         sleepTime = TARGET_FRAME_TIME_NS - frameDuration;
         if (sleepTime > 0) {
-            // std.debug.print("sleeptime by: {d}\n", .{sleepTime});
+            std.debug.print("sleeptime by: {d}\n", .{sleepTime});
             std.Thread.sleep(@intCast(sleepTime));
         } else {
             std.debug.print("Missed frametime by: {d}", .{sleepTime});
