@@ -16,10 +16,6 @@ const Point = rTypes.GamePoint;
 pub const Line = struct {
     start: Point,
     end: Point,
-
-    pub fn init(start: Point, end: Point) Point {
-        return .{ .start = start, .end = end };
-    }
 };
 
 /// Represents a triangle defined by three vertices in game space.
