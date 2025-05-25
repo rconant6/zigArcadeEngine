@@ -8,9 +8,7 @@ const TransformCompStorage = types.TransformCompStorage;
 
 pub const EntityManager = struct {
     counter: usize,
-    // keep free list for recycling ids
     freeIds: std.fifo.LinearFifo(usize, .Dynamic),
-    // generation counter
     generations: std.ArrayList(u16),
 
     // component storage
@@ -33,10 +31,8 @@ pub const EntityManager = struct {
 
     // MARK: Component interface
     pub fn addComponent(self: *EntityManager, entity: Entity, cType: ComponentType) !bool {
-        std.debug.print("[ECS] - addComponent: Entity: {}, CompType: {}\n", .{ entity.id, cType });
         // validate the entity
         if (!self.isEntityValid(entity)) {
-            std.debug.print("[ECS] - addComponent: Cannot add component: EntityID: {} is invalid\n", .{entity.id});
             return false;
         }
         // entity type specific implementations TODO: this should probably be helper functions depending on size
@@ -48,10 +44,6 @@ pub const EntityManager = struct {
     fn addTransform(self: *EntityManager, entity: Entity, cType: ComponentType) !bool {
         // make sure it isn't already there (no hot reswapping) - make a new entity instead
         if (self.transform.entityToIndex.get(entity.id)) |_| {
-            std.debug.print(
-                "[ECS] - addComponent: Component {} already exists on EntityID: {}\n",
-                .{ @TypeOf(cType), entity.id },
-            );
             return false;
         }
         // insert into the storage
@@ -64,9 +56,7 @@ pub const EntityManager = struct {
     }
 
     pub fn removeComponent(self: *EntityManager, entity: Entity, cTag: ComponentTag) !bool {
-        std.debug.print("[ECS] - removeComponent: Entity: {}, CompType: {}\n", .{ entity.id, cTag });
         if (!self.isEntityValid(entity)) {
-            std.debug.print("[ECS] - removeComponent: Cannot remove component: EntityID: {} is invalid\n", .{entity.id});
             return false;
         }
         switch (cTag) {
@@ -76,7 +66,6 @@ pub const EntityManager = struct {
 
     fn removeTransform(self: *EntityManager, entity: Entity) !bool {
         const remIndex = self.transform.entityToIndex.get(entity.id) orelse {
-            std.debug.print("[ECS] - removeComponent: Transform doesn't exist on EntityID: {}\n", .{entity.id});
             return false;
         };
 
@@ -100,23 +89,27 @@ pub const EntityManager = struct {
     pub fn createEntity(self: *EntityManager) !Entity {
         if (self.freeIds.readItem()) |id| {
             // recycled ID path
-            std.debug.assert(id < self.generations.items.len); // NOTE: remove
+            std.debug.assert(id < self.generations.items.len);
 
-            std.debug.print("[ECS] - (recycle)createEntity(id: {d}, gen: {d})\n", .{ id, self.generations.items[id] });
             return Entity.init(id, self.generations.items[id]);
         } else {
             // new ID path
             const id = self.counter;
             try self.generations.append(0);
             self.counter += 1;
-            std.debug.assert(id < self.generations.items.len); // NOTE: remove
-            std.debug.print("[ECS] - (new)createEntity(id: {d}, gen: {d})\n", .{ id, self.generations.items[id] });
+            std.debug.assert(id < self.generations.items.len);
             return Entity.init(id, 0);
         }
     }
 
-    pub fn destroyEntity(self: *EntityManager, entity: Entity) void {
+    pub fn destroyEntity(self: *EntityManager, entity: Entity) !void {
         std.debug.assert(self.isEntityValid(entity));
+
+        inline for (@typeInfo(ComponentTag).@"enum".fields) |field| {
+            const tag: ComponentTag = @enumFromInt(field.value);
+            _ = try self.removeComponent(entity, tag); //catch {
+        }
+
         self.generations.items[entity.id] += 1;
         self.freeIds.writeItemAssumeCapacity(entity.id);
     }
