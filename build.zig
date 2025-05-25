@@ -1,5 +1,4 @@
 const std = @import("std");
-const rlz = @import("raylib_zig");
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
