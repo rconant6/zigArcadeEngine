@@ -26,5 +26,44 @@ pub fn build(b: *std.Build) !void {
     const run_step = b.step("run", "Run zasteroids");
     run_step.dependOn(&run_cmd.step);
 
+    addTestStep(b, "test", "Run all tests", "tests/main.zig", target, optimize);
+    addTestStep(b, "test-entity", "Run entity tests", "tests/entity.zig", target, optimize);
+    addTestStep(b, "test-component", "Run component tests", "tests/component.zig", target, optimize);
+    addTestStep(b, "test-render", "Run render tests", "tests/render.zig", target, optimize);
+
     b.installArtifact(exe);
+}
+
+fn addTestStep(
+    b: *std.Build,
+    name: []const u8,
+    description: []const u8,
+    rootFile: []const u8,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) void {
+    const testStep = b.step(name, description);
+
+    const unitTests = b.addTest(.{
+        .root_source_file = b.path(rootFile),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    // Add individual modules for each file your tests need
+    const renderer_mod = b.createModule(.{
+        .root_source_file = b.path("game/renderer.zig"),
+    });
+
+    const ecs_mod = b.createModule(.{
+        .root_source_file = b.path("game/ecs.zig"),
+    });
+
+    unitTests.root_module.addImport("renderer", renderer_mod);
+    unitTests.root_module.addImport("ecs", ecs_mod);
+    const run_tests = b.addRunArtifact(unitTests);
+
+    // run_tests.addArgs(&.{ "--verbose", "--summary all" });
+
+    testStep.dependOn(&run_tests.step);
 }
