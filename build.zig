@@ -22,6 +22,16 @@ pub fn build(b: *std.Build) !void {
     });
     exe.root_module.addImport("keyboard", keyboard_module);
 
+    // Add individual modules for each file your tests need
+    const renderer_mod = b.createModule(.{
+        .root_source_file = b.path("game/renderer.zig"),
+    });
+    const ecs_mod = b.createModule(.{
+        .root_source_file = b.path("game/ecs.zig"),
+    });
+    exe.root_module.addImport("renderer", renderer_mod);
+    exe.root_module.addImport("ecs", ecs_mod);
+
     const run_cmd = b.addRunArtifact(exe);
     const run_step = b.step("run", "Run zasteroids");
     run_step.dependOn(&run_cmd.step);
@@ -54,10 +64,10 @@ fn addTestStep(
     const renderer_mod = b.createModule(.{
         .root_source_file = b.path("game/renderer.zig"),
     });
-
     const ecs_mod = b.createModule(.{
         .root_source_file = b.path("game/ecs.zig"),
     });
+    ecs_mod.addImport("renderer", renderer_mod);
 
     unitTests.root_module.addImport("renderer", renderer_mod);
     unitTests.root_module.addImport("ecs", ecs_mod);
