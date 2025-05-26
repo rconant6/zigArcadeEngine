@@ -12,7 +12,7 @@ const Entity = ecs.Entity;
 const EntityManager = ecs.EntityManager;
 // const TransformComp = ecs.TransformComp;
 
-const rend = @import("renderer.zig");
+const rend = @import("renderer");
 const Circle = rend.Circle;
 const Color = rend.Color;
 const Line = rend.Line;
@@ -132,5 +132,5 @@ pub fn main() !void {
         }
     }
 
-    std.debug.print("Application shutting down\n", .{});
+    std.debug.print("[MAIN] Application shutting down\n", .{});
 }

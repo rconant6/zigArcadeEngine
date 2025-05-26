@@ -4,7 +4,7 @@ pub const c = @cImport({
     @cInclude("/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/CBridge/w/include/wBridge.h");
 });
 
-pub const Color = @import("renderer.zig").Color;
+pub const Color = @import("renderer").Color;
 
 // MARK: Window Bridging
 pub const WindowConfig = struct {
