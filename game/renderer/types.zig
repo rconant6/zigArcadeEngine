@@ -9,6 +9,15 @@ pub const Color = col.Color;
 pub const fb = @import("frameBuffer.zig");
 pub const FrameBuffer = fb.FrameBuffer;
 
+pub const ShapeType = enum {
+    Circle,
+    Ellipse,
+    Line,
+    Rectangle,
+    Triangle,
+    Polygon,
+};
+
 pub const prim = @import("primitives.zig");
 pub const Circle = prim.Circle;
 pub const Ellipse = prim.Ellipse;

@@ -4,7 +4,10 @@ const types = @import("types.zig");
 const Entity = types.Entity;
 const ComponentTag = types.ComponentTag;
 const ComponentType = types.ComponentType;
+const TransformComp = types.TransformComp;
 const TransformCompStorage = types.TransformCompStorage;
+const RenderComp = types.RenderComp;
+const RenderCompStorage = types.RenderCompStorage;
 
 pub const EntityManager = struct {
     counter: usize,
@@ -13,8 +16,7 @@ pub const EntityManager = struct {
 
     // component storage
     transform: TransformCompStorage, // transform - pos, rot, scale
-
-    // render - info needed to be drawn by the renderer (shapes/colors)
+    render: RenderCompStorage,
     // physics - speed / accel data for movement
     // collision - data needed for collisions
     // ai - stuff needed for enemy control
@@ -35,32 +37,46 @@ pub const EntityManager = struct {
         if (!self.isEntityValid(entity)) {
             return false;
         }
-        // entity type specific implementations TODO: this should probably be helper functions depending on size
         switch (cType) {
-            .Transform => return self.addTransform(entity, cType),
+            .Transform => return self.addTransform(entity, cType.Transform),
+            .Render => return self.addRender(entity, cType.Render),
         }
     }
 
-    fn addTransform(self: *EntityManager, entity: Entity, cType: ComponentType) !bool {
-        // make sure it isn't already there (no hot reswapping) - make a new entity instead
+    fn addTransform(self: *EntityManager, entity: Entity, comp: TransformComp) !bool {
         if (self.transform.entityToIndex.get(entity.id)) |_| {
             return false;
         }
         // insert into the storage
-        const index = self.transform.transforms.items.len; // old len (next insert)
-        try self.transform.transforms.append(cType.Transform); // put it in the dense array
+        const index = self.transform.data.items.len; // old len (next insert)
+        try self.transform.data.append(comp); // put it in the dense array
         try self.transform.entityToIndex.put(entity.id, index); // store the index for the entity
         try self.transform.indexToEntity.append(entity.id); // keep the same index store the entity for revLookup
-        std.debug.assert(self.transform.indexToEntity.items.len == self.transform.transforms.items.len);
+        std.debug.assert(self.transform.indexToEntity.items.len == self.transform.data.items.len);
         return true;
     }
 
+    fn addRender(self: *EntityManager, entity: Entity, comp: RenderComp) !bool {
+        if (self.render.entityToIndex.get(entity.id)) |_| {
+            return false;
+        }
+        // insert into the storage
+        const index = self.render.data.items.len; // old len (next insert)
+        try self.render.data.append(comp); // put it in the dense array
+        try self.render.entityToIndex.put(entity.id, index); // store the index for the entity
+        try self.render.indexToEntity.append(entity.id); // keep the same index store the entity for revLookup
+        std.debug.assert(self.render.indexToEntity.items.len == self.render.data.items.len);
+        return true;
+    }
+
+    // MARK: Removal
     pub fn removeComponent(self: *EntityManager, entity: Entity, cTag: ComponentTag) !bool {
         if (!self.isEntityValid(entity)) {
             return false;
         }
         switch (cTag) {
             .Transform => return try self.removeTransform(entity),
+            .Render => return try self.removeRender(entity),
         }
     }
 
@@ -69,19 +85,40 @@ pub const EntityManager = struct {
             return false;
         };
 
-        const lastTransform = self.transform.transforms.pop() orelse return false;
+        const lastTransform = self.transform.data.pop() orelse return false;
         const lastEntity = self.transform.indexToEntity.pop() orelse return false;
 
         _ = self.transform.entityToIndex.remove(entity.id);
 
-        if (remIndex < self.transform.transforms.items.len) {
-            self.transform.transforms.items[remIndex] = lastTransform;
+        if (remIndex < self.transform.data.items.len) {
+            self.transform.data.items[remIndex] = lastTransform;
             self.transform.indexToEntity.items[remIndex] = lastEntity;
 
             try self.transform.entityToIndex.put(lastEntity, remIndex);
         }
 
-        std.debug.assert(self.transform.indexToEntity.items.len == self.transform.transforms.items.len);
+        std.debug.assert(self.transform.indexToEntity.items.len == self.transform.data.items.len);
+        return true;
+    }
+
+    fn removeRender(self: *EntityManager, entity: Entity) !bool {
+        const remIndex = self.render.entityToIndex.get(entity.id) orelse {
+            return false;
+        };
+
+        const lastTransform = self.render.data.pop() orelse return false;
+        const lastEntity = self.render.indexToEntity.pop() orelse return false;
+
+        _ = self.render.entityToIndex.remove(entity.id);
+
+        if (remIndex < self.render.data.items.len) {
+            self.render.data.items[remIndex] = lastTransform;
+            self.render.indexToEntity.items[remIndex] = lastEntity;
+
+            try self.render.entityToIndex.put(lastEntity, remIndex);
+        }
+
+        std.debug.assert(self.render.indexToEntity.items.len == self.render.data.items.len);
         return true;
     }
 
@@ -127,17 +164,18 @@ pub const EntityManager = struct {
 
     // MARK: Memory management
     pub fn init(alloc: *std.mem.Allocator) !EntityManager {
-        std.debug.print("[ECS] - manager.init()\n", .{});
         var nextList = std.fifo.LinearFifo(usize, .Dynamic).init(alloc.*);
         try nextList.ensureTotalCapacity(1024);
         const gens = std.ArrayList(u16).init(alloc.*);
 
-        const storage = try TransformCompStorage.init(alloc);
+        const tstorage = try TransformCompStorage.init(alloc);
+        const rstorage = try RenderCompStorage.init(alloc);
         return .{
             .counter = 0,
             .freeIds = nextList,
             .generations = gens,
-            .transform = storage,
+            .transform = tstorage,
+            .render = rstorage,
         };
     }
 
@@ -145,6 +183,6 @@ pub const EntityManager = struct {
         self.freeIds.deinit();
         self.generations.deinit();
         self.transform.deinit();
-        std.debug.print("[ECS] - manager.deinit()\n", .{});
+        self.render.deinit();
     }
 };

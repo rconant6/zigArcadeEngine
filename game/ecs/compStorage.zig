@@ -3,26 +3,45 @@ const types = @import("types.zig");
 
 const ComponentType = types.ComponentType;
 const TransformComp = types.TransformComp;
+const RenderComp = types.RenderComp;
 
 // MARK: Transform
 pub const TransformCompStorage = struct {
-    transforms: std.ArrayList(TransformComp),
+    data: std.ArrayList(TransformComp),
     entityToIndex: std.AutoHashMap(usize, usize),
     indexToEntity: std.ArrayList(usize),
 
     pub fn init(alloc: *std.mem.Allocator) !TransformCompStorage {
-        std.debug.print("[ECS] - transformStorage.init()\n", .{});
         return .{
-            .transforms = std.ArrayList(TransformComp).init(alloc.*),
+            .data = std.ArrayList(TransformComp).init(alloc.*),
             .entityToIndex = std.AutoHashMap(usize, usize).init(alloc.*),
             .indexToEntity = std.ArrayList(usize).init(alloc.*),
         };
     }
 
     pub fn deinit(self: *TransformCompStorage) void {
-        self.transforms.deinit();
+        self.data.deinit();
         self.indexToEntity.deinit();
         self.entityToIndex.deinit();
-        std.debug.print("[ECS] - transformStorage.deinit()\n", .{});
+    }
+};
+
+pub const RenderCompStorage = struct {
+    data: std.ArrayList(RenderComp),
+    entityToIndex: std.AutoHashMap(usize, usize),
+    indexToEntity: std.ArrayList(usize),
+
+    pub fn init(alloc: *std.mem.Allocator) !RenderCompStorage {
+        return .{
+            .data = std.ArrayList(RenderComp).init(alloc.*),
+            .entityToIndex = std.AutoHashMap(usize, usize).init(alloc.*),
+            .indexToEntity = std.ArrayList(usize).init(alloc.*),
+        };
+    }
+
+    pub fn deinit(self: *RenderCompStorage) void {
+        self.data.deinit();
+        self.indexToEntity.deinit();
+        self.entityToIndex.deinit();
     }
 };
