@@ -10,5 +10,6 @@ pub const Point = rTypes.GamePoint;
 pub const Polygon = rTypes.Polygon;
 pub const Rectangle = rTypes.Rectangle;
 pub const ScreenPoint = rTypes.ScreenPoint;
-pub const ShapeType = rTypes.ShapeType;
+pub const ShapeData = rTypes.ShapeData;
+pub const Transform = rTypes.Transform;
 pub const Triangle = rTypes.Triangle;

@@ -1,6 +1,6 @@
 const std = @import("std");
-const types = @import("types.zig");
 
+const types = @import("types.zig");
 const Entity = types.Entity;
 const ComponentTag = types.ComponentTag;
 const ComponentType = types.ComponentType;
@@ -8,6 +8,9 @@ const TransformComp = types.TransformComp;
 const TransformCompStorage = types.TransformCompStorage;
 const RenderComp = types.RenderComp;
 const RenderCompStorage = types.RenderCompStorage;
+const ShapeData = types.rend.ShapeData;
+
+const Renderer = types.rend.Renderer;
 
 pub const EntityManager = struct {
     counter: usize,
@@ -155,11 +158,23 @@ pub const EntityManager = struct {
         return entity.id < self.counter and
             entity.generation == self.generations.items[entity.id];
     }
-
+    // MARK: Systems interface
     pub fn update(self: *EntityManager, dt: f32) void {
         _ = dt;
         _ = self;
         // do all the updates through the systems
+    }
+
+    pub fn renderSystem(self: *EntityManager, renderer: *Renderer) void {
+        for (self.transform.indexToEntity.items, 0..) |entityID, transformIndex| {
+            if (self.render.entityToIndex.get(entityID)) |renderIndex| {
+                const transformComp = self.transform.data.items[transformIndex];
+                const renderComp = self.render.data.items[renderIndex];
+                if (renderComp.visible) {
+                    renderer.drawShape(renderComp.shapeData, transformComp.transform);
+                }
+            }
+        }
     }
 
     // MARK: Memory management

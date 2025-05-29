@@ -2,6 +2,7 @@ const std = @import("std");
 const rTypes = @import("types.zig");
 
 const Point = rTypes.GamePoint;
+const Color = rTypes.Color;
 
 /// Represents a line segment between two points in game space.
 ///
@@ -16,6 +17,7 @@ const Point = rTypes.GamePoint;
 pub const Line = struct {
     start: Point,
     end: Point,
+    color: Color,
 };
 
 /// Represents a triangle defined by three vertices in game space.
@@ -32,6 +34,8 @@ pub const Line = struct {
 ///     const triangle = Triangle.init(&points);
 pub const Triangle = struct {
     vertices: []Point,
+    outlineColor: ?Color,
+    fillColor: ?Color,
 
     /// Points are sorted from top to bottm via y, and then left to right via x for rendering
     pub fn init(points: []Point) Triangle {
@@ -58,6 +62,8 @@ pub const Rectangle = struct {
     center: Point,
     halfWidth: f32,
     halfHeight: f32,
+    outlineColor: ?Color,
+    fillColor: ?Color,
 
     pub fn initSquare(center: Point, size: f32) Rectangle {
         return .{
@@ -123,6 +129,8 @@ pub const Rectangle = struct {
 pub const Polygon = struct {
     vertices: []const Point,
     center: Point,
+    outlineColor: ?Color,
+    fillColor: ?Color,
 
     /// Creates a new Polygon with the given points.
     ///
@@ -153,12 +161,16 @@ pub const Polygon = struct {
 pub const Circle = struct {
     origin: Point,
     radius: f32,
+    outlineColor: ?Color,
+    fillColor: ?Color,
 };
 
 pub const Ellipse = struct {
     origin: Point,
     semiMinor: f32,
     semiMajor: f32,
+    outlineColor: ?Color,
+    fillColor: ?Color,
 };
 
 fn sortPointByX(context: void, a: Point, b: Point) bool {
