@@ -4,6 +4,7 @@ pub const Renderer = rend.Renderer;
 const rTypes = @import("renderer/types.zig");
 pub const Circle = rTypes.Circle;
 pub const Color = rTypes.Color;
+pub const Colors = rTypes.Colors;
 pub const Ellipse = rTypes.Ellipse;
 pub const Line = rTypes.Line;
 pub const Point = rTypes.GamePoint;

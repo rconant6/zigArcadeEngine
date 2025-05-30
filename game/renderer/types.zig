@@ -4,6 +4,7 @@ pub const Renderer = @import("core.zig").Renderer;
 
 pub const col = @import("color.zig");
 pub const Color = col.Color;
+pub const Colors = col.Colors;
 
 pub const fb = @import("frameBuffer.zig");
 pub const FrameBuffer = fb.FrameBuffer;
