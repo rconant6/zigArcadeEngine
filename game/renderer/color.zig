@@ -1,3 +1,4 @@
+const std = @import("std");
 /// Represents a color with red, green, blue, and alpha channels.
 ///
 /// Color components are stored as normalized floating-point values (0.0 to 1.0).
@@ -9,7 +10,7 @@
 ///     const transparentBlue = Color.init(0, 0, 1, 0.5); // Semi-transparent blue
 ///     const fromBytes = Color.initFromInt(255, 128, 0, 255); // Orange from byte values
 ///     const fromHex6 = Color.initFromHex("#ffffff");
-///     const fromHex8 = Color.initFromHex("#01fefeff"); // Can use either 6 or 8 (alpha = 1 or alpha value)
+///     const fromHex8 = Color.initFromHex("#01fefeff"); // Can use either 6 or 8 (alpha = 255 or alpha value)
 pub const Color = struct {
     r: f32,
     g: f32,
@@ -20,7 +21,39 @@ pub const Color = struct {
         return .{ .r = r, .g = g, .b = b, .a = a };
     }
 
-    pub fn initFromHex() Color {}
+    fn hexCharToInt(comptime c: u8) u8 {
+        return switch (c) {
+            '0'...'9' => c - '0',
+            'a'...'f' => c - 'a' + 10,
+            'A'...'F' => c - 'A' + 10,
+            else => @compileError("Invalid hex character"),
+        };
+    }
+
+    fn parseHexPair(comptime c1: u8, comptime c2: u8) u8 {
+        return hexCharToInt(c1) * 16 + hexCharToInt(c2);
+    }
+
+    pub fn initFromHex(comptime str: []const u8) Color {
+        const len = str.len;
+        if ((len != 7 and len != 9) or str[0] != '#')
+            @compileError("Invalid hex color format: expected #RRGGBB or #RRGGBBAA\n");
+
+        const rInt = parseHexPair(str[1], str[2]);
+        const gInt = parseHexPair(str[3], str[4]);
+        const bInt = parseHexPair(str[5], str[6]);
+        const aInt = if (len == 9) parseHexPair(str[7], str[8]) else 255;
+        // @compileLog(.{rInt});
+        // @compileLog(.{gInt});
+        // @compileLog(.{bInt});
+        // @compileLog(.{aInt});
+        return .{
+            .r = @as(f32, @floatFromInt(rInt)) / 255.0,
+            .g = @as(f32, @floatFromInt(gInt)) / 255.0,
+            .b = @as(f32, @floatFromInt(bInt)) / 255.0,
+            .a = @as(f32, @floatFromInt(aInt)) / 255.0,
+        };
+    }
 
     pub fn initFromInt(r: u8, g: u8, b: u8, a: u8) Color {
         return .{
