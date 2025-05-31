@@ -2,6 +2,8 @@ const std = @import("std");
 
 const types = @import("types.zig");
 const Entity = types.Entity;
+const EntityConfig = types.EntityConfig;
+const EntityHandle = types.EntityHandle;
 const ComponentTag = types.ComponentTag;
 const ComponentType = types.ComponentType;
 const TransformComp = types.TransformComp;
@@ -27,12 +29,45 @@ pub const EntityManager = struct {
     // playable - boolean flag?
 
     // systems in the engine (examples)
-    // transformSys
-    // renderSys
     // physicsSys
     // collisionSys
     // aiSys
     // shootingSys
+
+    // MARK: Wrappers for easier use?
+    pub fn createCircle(self: *EntityManager, config: EntityConfig.CircleConfig) !EntityHandle {
+        const entity = try self.createEntity();
+        if (config.scale) |scale| if (scale < 0) return error.InvalidScaleParameter;
+        if (config.radius <= 0) return error.InavlidRadiusParameter;
+
+        const transform = TransformComp{
+            .transform = .{ .pos = config.pos, .rot = config.rot, .scale = config.scale },
+        };
+        const tformAdd = try self.addTransform(entity, transform);
+
+        const render = RenderComp{
+            .shapeData = .{
+                .Circle = .{
+                    .origin = config.origin,
+                    .radius = config.radius,
+                    .outlineColor = config.outlineColor,
+                    .fillColor = config.fillColor,
+                },
+            },
+            .visible = true,
+        };
+        const rendAdd = try self.addRender(entity, render);
+
+        if (tformAdd and rendAdd) {
+            return .{
+                .entity = entity,
+                .manager = self,
+            };
+        }
+
+        std.debug.panic("[ECS] Failed to add components to new entity: (createCircle)\n", .{});
+        // unreachable; TODO: this might be best
+    }
 
     // MARK: Component interface
     pub fn addComponent(self: *EntityManager, entity: Entity, cType: ComponentType) !bool {

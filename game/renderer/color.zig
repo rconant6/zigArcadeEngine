@@ -43,10 +43,7 @@ pub const Color = struct {
         const gInt = parseHexPair(str[3], str[4]);
         const bInt = parseHexPair(str[5], str[6]);
         const aInt = if (len == 9) parseHexPair(str[7], str[8]) else 255;
-        // @compileLog(.{rInt});
-        // @compileLog(.{gInt});
-        // @compileLog(.{bInt});
-        // @compileLog(.{aInt});
+
         return .{
             .r = @as(f32, @floatFromInt(rInt)) / 255.0,
             .g = @as(f32, @floatFromInt(gInt)) / 255.0,
