@@ -35,6 +35,44 @@ pub const EntityManager = struct {
     // shootingSys
 
     // MARK: Wrappers for easier use?
+    pub fn createShapeEntity(self: *EntityManager, config: EntityConfig.ShapeConfigs) !EntityHandle {
+        return switch (config) {
+            .Circle => |ccon| createCircle(self, ccon),
+            .Line => |lcon| createLine(self, lcon),
+        };
+    }
+
+    pub fn createLine(self: *EntityManager, config: EntityConfig.LineConfig) !EntityHandle {
+        const entity = try self.createEntity();
+        if (config.scale) |scale| if (scale < 0) return error.InvalidScaleParameter;
+
+        const transform = TransformComp{
+            .transform = .{ .pos = config.pos, .rot = config.rot, .scale = config.scale },
+        };
+        const tformAdd = try self.addTransform(entity, transform);
+
+        const render = RenderComp{
+            .shapeData = .{
+                .Line = .{
+                    .start = config.start,
+                    .end = config.end,
+                    .color = config.color,
+                },
+            },
+            .visible = true,
+        };
+        const rendAdd = try self.addRender(entity, render);
+
+        if (tformAdd and rendAdd) {
+            return .{
+                .entity = entity,
+                .manager = self,
+            };
+        }
+        std.debug.panic("[ECS] Failed to add components to new entity: (createCircle)\n", .{});
+        // unreachable; TODO: this might be best
+    }
+
     pub fn createCircle(self: *EntityManager, config: EntityConfig.CircleConfig) !EntityHandle {
         const entity = try self.createEntity();
         if (config.scale) |scale| if (scale < 0) return error.InvalidScaleParameter;
