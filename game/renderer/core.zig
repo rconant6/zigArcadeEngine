@@ -445,12 +445,12 @@ pub const Renderer = struct {
                 std.mem.sort(Point, &verts2, {}, sortPointByY);
 
                 const tri1 = Triangle{
-                    .vertices = &verts1,
+                    .vertices = verts1,
                     .fillColor = rect.fillColor.?,
                     .outlineColor = null,
                 };
                 const tri2 = Triangle{
-                    .vertices = &verts2,
+                    .vertices = verts2,
                     .fillColor = rect.fillColor.?,
                     .outlineColor = null,
                 };
@@ -506,10 +506,10 @@ pub const Renderer = struct {
 
     fn drawTriangle(renderer: *Renderer, tri: Triangle, transform: ?Transform) void {
         if (tri.fillColor) |fc| {
-            drawTriangleFilled(renderer, tri.vertices, transform, fc);
+            drawTriangleFilled(renderer, &tri.vertices, transform, fc);
         }
         if (tri.outlineColor) |oc| {
-            drawOutlineWithTransform(renderer, tri.vertices, transform, oc);
+            drawOutlineWithTransform(renderer, &tri.vertices, transform, oc);
         }
     }
 

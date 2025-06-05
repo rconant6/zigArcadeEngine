@@ -33,7 +33,7 @@ pub const Line = struct {
 ///     };
 ///     const triangle = Triangle.init(&points);
 pub const Triangle = struct {
-    vertices: []Point,
+    vertices: [3]Point,
     outlineColor: ?Color,
     fillColor: ?Color,
 
@@ -136,13 +136,17 @@ pub const Polygon = struct {
     ///
     /// The center (centroid) is automatically calculated, and the vertices
     /// are sorted in clockwise order around this center.
-    pub fn init(points: []Point) Polygon {
+    pub fn init(alloc: std.mem.Allocator, points: []const Point) !Polygon {
         const center = calculateCentroid(points);
+        const newPoints = try alloc.dupe(Point, points);
         const sortContext = PolygonSortContext{ .centroid = center };
-        std.mem.sort(Point, points, sortContext, sortPointsClockwise);
+        std.mem.sort(Point, newPoints, sortContext, sortPointsClockwise);
+
         return .{
             .center = center,
-            .vertices = points,
+            .vertices = newPoints,
+            .outlineColor = null,
+            .fillColor = null,
         };
     }
 };

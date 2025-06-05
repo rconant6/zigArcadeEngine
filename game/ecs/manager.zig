@@ -18,6 +18,7 @@ pub const EntityManager = struct {
     counter: usize,
     freeIds: std.fifo.LinearFifo(usize, .Dynamic),
     generations: std.ArrayList(u16),
+    arena: std.heap.ArenaAllocator,
 
     // component storage
     transform: TransformCompStorage, // transform - pos, rot, scale
@@ -38,8 +39,106 @@ pub const EntityManager = struct {
     pub fn createShapeEntity(self: *EntityManager, config: EntityConfig.ShapeConfigs) !EntityHandle {
         return switch (config) {
             .Circle => |ccon| createCircle(self, ccon),
+            // .Ellipse => |econ| createEllipse(self, econ),
             .Line => |lcon| createLine(self, lcon),
+            .Polygon => |pcon| createPolygon(self, pcon),
+            .Rectangle => |rcon| createRectangle(self, rcon),
+            .Triangle => |tcon| createTriangle(self, tcon),
         };
+    }
+
+    pub fn createPolygon(self: *EntityManager, config: EntityConfig.PolygonConfig) !EntityHandle {
+        const entity = try self.createEntity();
+        if (config.scale) |scale| if (scale < 0) return error.InvalidScaleParameter;
+        if (config.vertices == null) return error.PolygonRequiresVertices;
+
+        const transform = TransformComp{
+            .transform = .{ .pos = config.pos, .rot = config.rot, .scale = config.scale },
+        };
+        const tformAdd = try self.addTransform(entity, transform);
+
+        std.debug.print("{any}\n", .{config.vertices});
+        var polygon = try types.rend.Polygon.init(self.arena.allocator(), config.vertices.?);
+        polygon.outlineColor = config.outlineColor;
+        polygon.fillColor = config.fillColor;
+        const render = RenderComp{
+            .shapeData = .{ .Polygon = polygon },
+            .visible = true,
+        };
+        const rendAdd = try self.addRender(entity, render);
+
+        if (tformAdd and rendAdd) {
+            return .{
+                .entity = entity,
+                .manager = self,
+            };
+        }
+        std.debug.panic("[ECS] Failed to add components to new entity: (createCircle)\n", .{});
+        // unreachable; TODO: this might be best
+    }
+
+    pub fn createRectangle(self: *EntityManager, config: EntityConfig.RectangleConfig) !EntityHandle {
+        const entity = try self.createEntity();
+        if (config.scale) |scale| if (scale < 0) return error.InvalidScaleParameter;
+
+        const transform = TransformComp{
+            .transform = .{ .pos = config.pos, .rot = config.rot, .scale = config.scale },
+        };
+        const tformAdd = try self.addTransform(entity, transform);
+
+        const render = RenderComp{
+            .shapeData = .{
+                .Rectangle = .{
+                    .center = config.center,
+                    .halfWidth = config.halfWidth,
+                    .halfHeight = config.halfHeight,
+                    .outlineColor = config.outlineColor,
+                    .fillColor = config.fillColor,
+                },
+            },
+            .visible = true,
+        };
+        const rendAdd = try self.addRender(entity, render);
+
+        if (tformAdd and rendAdd) {
+            return .{
+                .entity = entity,
+                .manager = self,
+            };
+        }
+        std.debug.panic("[ECS] Failed to add components to new entity: (createCircle)\n", .{});
+        // unreachable; TODO: this might be best
+    }
+
+    pub fn createTriangle(self: *EntityManager, config: EntityConfig.TriangleConfig) !EntityHandle {
+        const entity = try self.createEntity();
+        if (config.scale) |scale| if (scale < 0) return error.InvalidScaleParameter;
+
+        const transform = TransformComp{
+            .transform = .{ .pos = config.pos, .rot = config.rot, .scale = config.scale },
+        };
+        const tformAdd = try self.addTransform(entity, transform);
+
+        const render = RenderComp{
+            .shapeData = .{
+                .Triangle = .{
+                    .vertices = config.vertices,
+                    .outlineColor = config.outlineColor,
+                    .fillColor = config.fillColor,
+                },
+            },
+            .visible = true,
+        };
+        const rendAdd = try self.addRender(entity, render);
+
+        if (tformAdd and rendAdd) {
+            return .{
+                .entity = entity,
+                .manager = self,
+            };
+        }
+        std.debug.panic("[ECS] Failed to add components to new entity: (createCircle)\n", .{});
+        // unreachable; TODO: this might be best
     }
 
     pub fn createLine(self: *EntityManager, config: EntityConfig.LineConfig) !EntityHandle {
@@ -260,6 +359,7 @@ pub const EntityManager = struct {
         const rstorage = try RenderCompStorage.init(alloc);
         return .{
             .counter = 0,
+            .arena = std.heap.ArenaAllocator.init(alloc.*),
             .freeIds = nextList,
             .generations = gens,
             .transform = tstorage,
@@ -272,5 +372,6 @@ pub const EntityManager = struct {
         self.generations.deinit();
         self.transform.deinit();
         self.render.deinit();
+        self.arena.deinit();
     }
 };
