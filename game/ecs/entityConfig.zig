@@ -2,8 +2,8 @@ const std = @import("std");
 const rend = @import("types.zig").rend;
 
 pub const CircleConfig = struct {
-    pos: ?rend.Point = rend.Point{ .x = 0, .y = 0 }, // Translation away from the origin
-    rot: ?f32 = null,
+    offset: ?rend.Point = rend.Point{ .x = 0, .y = 0 }, // Translation away from the origin
+    rotation: ?f32 = null,
     scale: ?f32 = null,
 
     origin: rend.Point = rend.Point{ .x = 0, .y = 0 }, // Where in screenspace you want this to spawn/originate from
@@ -13,8 +13,8 @@ pub const CircleConfig = struct {
 };
 
 pub const LineConfig = struct {
-    pos: ?rend.Point = rend.Point{ .x = 0, .y = 0 }, // Translation away from the origin
-    rot: ?f32 = null,
+    offset: ?rend.Point = rend.Point{ .x = 0, .y = 0 }, // Translation away from the origin
+    rotation: ?f32 = null,
     scale: ?f32 = null,
 
     start: rend.Point = rend.Point{ .x = -0.1, .y = 0 },
@@ -23,8 +23,8 @@ pub const LineConfig = struct {
 };
 
 pub const RectangleConfig = struct {
-    pos: ?rend.Point = rend.Point{ .x = 0, .y = 0 }, // Translation away from the origin
-    rot: ?f32 = null,
+    offset: ?rend.Point = rend.Point{ .x = 0, .y = 0 }, // Translation away from the origin
+    rotation: ?f32 = null,
     scale: ?f32 = null,
 
     center: rend.Point = rend.Point{ .x = 0, .y = 0 },
@@ -35,8 +35,8 @@ pub const RectangleConfig = struct {
 };
 
 pub const TriangleConfig = struct {
-    pos: ?rend.Point = rend.Point{ .x = 0, .y = 0 }, // Translation away from the origin
-    rot: ?f32 = null,
+    offset: ?rend.Point = rend.Point{ .x = 0, .y = 0 }, // Translation away from the origin
+    rotation: ?f32 = null,
     scale: ?f32 = null,
 
     vertices: [3]rend.Point = .{
@@ -49,8 +49,8 @@ pub const TriangleConfig = struct {
 };
 
 pub const PolygonConfig = struct {
-    pos: ?rend.Point = rend.Point{ .x = 0, .y = 0 }, // Translation away from the origin
-    rot: ?f32 = null,
+    offset: ?rend.Point = rend.Point{ .x = 0, .y = 0 }, // Translation away from the origin
+    rotation: ?f32 = null,
     scale: ?f32 = null,
 
     vertices: ?[]rend.Point = null,
