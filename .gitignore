@@ -1,3 +1,6 @@
-./.gitignore
-
+.gitignore
+CLAUDE.md
 game/scratch.zig
+
+
+
