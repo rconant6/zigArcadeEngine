@@ -17,7 +17,7 @@ const Color = rTypes.Color;
 pub const Line = struct {
     start: Point,
     end: Point,
-    color: Color,
+    color: ?Color = null,
 };
 
 /// Represents a triangle defined by three vertices in game space.
@@ -34,8 +34,8 @@ pub const Line = struct {
 ///     const triangle = Triangle.init(&points);
 pub const Triangle = struct {
     vertices: [3]Point,
-    outlineColor: ?Color,
-    fillColor: ?Color,
+    outlineColor: ?Color = null,
+    fillColor: ?Color = null,
 
     /// Points are sorted from top to bottm via y, and then left to right via x for rendering
     pub fn init(points: []Point) Triangle {
@@ -62,8 +62,8 @@ pub const Rectangle = struct {
     center: Point,
     halfWidth: f32,
     halfHeight: f32,
-    outlineColor: ?Color,
-    fillColor: ?Color,
+    outlineColor: ?Color = null,
+    fillColor: ?Color = null,
 
     pub fn initSquare(center: Point, size: f32) Rectangle {
         return .{
@@ -129,8 +129,8 @@ pub const Rectangle = struct {
 pub const Polygon = struct {
     vertices: []const Point,
     center: Point,
-    outlineColor: ?Color,
-    fillColor: ?Color,
+    outlineColor: ?Color = null,
+    fillColor: ?Color = null,
 
     /// Creates a new Polygon with the given points.
     ///
@@ -165,16 +165,16 @@ pub const Polygon = struct {
 pub const Circle = struct {
     origin: Point,
     radius: f32,
-    outlineColor: ?Color,
-    fillColor: ?Color,
+    outlineColor: ?Color = null,
+    fillColor: ?Color = null,
 };
 
 pub const Ellipse = struct {
     origin: Point,
     semiMinor: f32,
     semiMajor: f32,
-    outlineColor: ?Color,
-    fillColor: ?Color,
+    outlineColor: ?Color = null,
+    fillColor: ?Color = null,
 };
 
 fn sortPointByX(context: void, a: Point, b: Point) bool {

@@ -149,9 +149,9 @@ pub const Renderer = struct {
 
         if (transform.scale) |s| result = scalePt(result, s);
 
-        if (transform.rot) |rot| result = rotatePt(result, rot);
+        if (transform.rotation) |rot| result = rotatePt(result, rot);
 
-        if (transform.pos) |pos| result = movePt(result, pos);
+        if (transform.offset) |pos| result = movePt(result, pos);
 
         return result;
     }
@@ -438,7 +438,7 @@ pub const Renderer = struct {
             c2 = transformPoint(c2, xform);
             c3 = transformPoint(c3, xform);
 
-            if (xform.rot) |_| {
+            if (xform.rotation) |_| {
                 var verts1: [3]Point = .{ c0, c1, c2 };
                 std.mem.sort(Point, &verts1, {}, sortPointByY);
                 var verts2: [3]Point = .{ c0, c2, c3 };
@@ -521,7 +521,7 @@ pub const Renderer = struct {
         var v2 = if (transform) |xform| transformPoint(verts[2], xform) else verts[2];
 
         if (transform) |xform| {
-            if (xform.rot) |_| {
+            if (xform.rotation) |_| {
                 var newVerts: [3]Point = .{ v0, v1, v2 };
                 std.mem.sort(Point, &newVerts, {}, sortPointByY);
                 v0 = newVerts[0];

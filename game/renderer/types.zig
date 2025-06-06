@@ -10,8 +10,8 @@ pub const fb = @import("frameBuffer.zig");
 pub const FrameBuffer = fb.FrameBuffer;
 
 pub const Transform = struct {
-    pos: ?GamePoint = null,
-    rot: ?f32 = null,
+    offset: ?GamePoint = null,
+    rotation: ?f32 = null,
     scale: ?f32 = null,
 };
 
