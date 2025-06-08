@@ -3,8 +3,29 @@ const types = @import("types.zig");
 
 const ComponentType = types.ComponentType;
 const ControlComp = types.ControlComp;
+const PlayerComp = types.PlayerComp;
 const RenderComp = types.RenderComp;
 const TransformComp = types.TransformComp;
+
+pub const PlayerCompStorage = struct {
+    data: std.ArrayList(PlayerComp),
+    entityToIndex: std.AutoHashMap(usize, usize),
+    indexToEntity: std.ArrayList(usize),
+
+    pub fn init(alloc: *std.mem.Allocator) !PlayerCompStorage {
+        return .{
+            .data = std.ArrayList(PlayerComp).init(alloc.*),
+            .entityToIndex = std.AutoHashMap(usize, usize).init(alloc.*),
+            .indexToEntity = std.ArrayList(usize).init(alloc.*),
+        };
+    }
+
+    pub fn deinit(self: *PlayerCompStorage) void {
+        self.data.deinit();
+        self.indexToEntity.deinit();
+        self.entityToIndex.deinit();
+    }
+};
 
 pub const ControlCompStorage = struct {
     data: std.ArrayList(ControlComp),

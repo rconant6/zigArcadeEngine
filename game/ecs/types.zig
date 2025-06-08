@@ -6,23 +6,27 @@ pub const EntityManager = @import("manager.zig").EntityManager;
 
 const comps = @import("components.zig");
 pub const ControlComp = comps.ControlComp;
+pub const PlayerComp = comps.PlayerComp;
 pub const RenderComp = comps.RenderComp;
 pub const TransformComp = comps.TransformComp;
 
 const storage = @import("compStorage.zig");
-pub const TransformCompStorage = storage.TransformCompStorage;
-pub const RenderCompStorage = storage.RenderCompStorage;
 pub const ControlCompStorage = storage.ControlCompStorage;
+pub const PlayerCompStorage = storage.PlayerCompStorage;
+pub const RenderCompStorage = storage.RenderCompStorage;
+pub const TransformCompStorage = storage.TransformCompStorage;
 
 // MARK: Types
 pub const ComponentTag = enum {
-    Transform,
-    Render,
     Control,
+    Player,
+    Render,
+    Transform,
 };
 
 pub const ComponentType = union(ComponentTag) {
-    Transform: TransformComp,
-    Render: RenderComp,
     Control: ControlComp,
+    Player: PlayerComp,
+    Render: RenderComp,
+    Transform: TransformComp,
 };

@@ -8,6 +8,8 @@ const ComponentTag = types.ComponentTag;
 const ComponentType = types.ComponentType;
 const ControlComp = types.ControlComp;
 const ControlCompStorage = types.ControlCompStorage;
+const PlayerComp = types.PlayerComp;
+const PlayerCompStorage = types.PlayerCompStorage;
 const TransformComp = types.TransformComp;
 const TransformCompStorage = types.TransformCompStorage;
 const RenderComp = types.RenderComp;
@@ -26,6 +28,7 @@ pub const EntityManager = struct {
     transform: TransformCompStorage, // transform - pos, rot, scale
     render: RenderCompStorage,
     control: ControlCompStorage,
+    player: PlayerCompStorage,
     // physics - speed / accel data for movement
     // collision - data needed for collisions
     // ai - stuff needed for enemy control
@@ -121,10 +124,22 @@ pub const EntityManager = struct {
             return false;
         }
         switch (cType) {
-            .Transform => return self.addTransform(entity, cType.Transform),
-            .Render => return self.addRender(entity, cType.Render),
             .Control => return self.addControl(entity, cType.Control),
+            .Player => return self.addPlayer(entity, cType.Player),
+            .Render => return self.addRender(entity, cType.Render),
+            .Transform => return self.addTransform(entity, cType.Transform),
         }
+    }
+
+    fn addPlayer(self: *EntityManager, entity: Entity, comp: PlayerComp) !bool {
+        if (self.player.entityToIndex.get(entity.id)) |_| return false;
+
+        const index = self.player.data.items.len;
+        try self.player.data.append(comp);
+        try self.player.entityToIndex.put(entity.id, index); // store the index for the entity
+        try self.player.indexToEntity.append(entity.id); // keep the same index store the entity for revLookup
+        std.debug.assert(self.player.indexToEntity.items.len == self.player.data.items.len);
+        return true;
     }
 
     fn addControl(self: *EntityManager, entity: Entity, comp: ControlComp) !bool {
@@ -168,10 +183,30 @@ pub const EntityManager = struct {
             return false;
         }
         switch (cTag) {
-            .Transform => return try self.removeTransform(entity),
-            .Render => return try self.removeRender(entity),
             .Control => return try self.removeControl(entity),
+            .Player => return try self.removePlayer(entity),
+            .Render => return try self.removeRender(entity),
+            .Transform => return try self.removeTransform(entity),
         }
+    }
+
+    fn removePlayer(self: *EntityManager, entity: Entity) !bool {
+        const remIndex = self.player.entityToIndex.get(entity.id) orelse return false;
+
+        const lastControl = self.player.data.pop() orelse return false;
+        const lastEntity = self.player.indexToEntity.pop() orelse return false;
+
+        _ = self.player.entityToIndex.remove(entity.id);
+
+        if (remIndex < self.player.data.items.len) {
+            self.player.data.items[remIndex] = lastControl;
+            self.player.indexToEntity.items[remIndex] = lastEntity;
+
+            try self.player.entityToIndex.put(lastEntity, remIndex);
+        }
+
+        std.debug.assert(self.player.indexToEntity.items.len == self.player.data.items.len);
+        return true;
     }
 
     fn removeControl(self: *EntityManager, entity: Entity) !bool {
@@ -292,6 +327,7 @@ pub const EntityManager = struct {
         const tstorage = try TransformCompStorage.init(alloc);
         const rstorage = try RenderCompStorage.init(alloc);
         const cstorage = try ControlCompStorage.init(alloc);
+        const pstorage = try PlayerCompStorage.init(alloc);
         return .{
             .counter = 0,
             .arena = std.heap.ArenaAllocator.init(alloc.*),
@@ -300,12 +336,14 @@ pub const EntityManager = struct {
             .transform = tstorage,
             .render = rstorage,
             .control = cstorage,
+            .player = pstorage,
         };
     }
 
     pub fn deinit(self: *EntityManager) void {
         self.freeIds.deinit();
         self.generations.deinit();
+        self.player.deinit();
         self.control.deinit();
         self.transform.deinit();
         self.render.deinit();
