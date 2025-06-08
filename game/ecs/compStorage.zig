@@ -2,10 +2,30 @@ const std = @import("std");
 const types = @import("types.zig");
 
 const ComponentType = types.ComponentType;
-const TransformComp = types.TransformComp;
+const ControlComp = types.ControlComp;
 const RenderComp = types.RenderComp;
+const TransformComp = types.TransformComp;
 
-// MARK: Transform
+pub const ControlCompStorage = struct {
+    data: std.ArrayList(ControlComp),
+    entityToIndex: std.AutoHashMap(usize, usize),
+    indexToEntity: std.ArrayList(usize),
+
+    pub fn init(alloc: *std.mem.Allocator) !ControlCompStorage {
+        return .{
+            .data = std.ArrayList(ControlComp).init(alloc.*),
+            .entityToIndex = std.AutoHashMap(usize, usize).init(alloc.*),
+            .indexToEntity = std.ArrayList(usize).init(alloc.*),
+        };
+    }
+
+    pub fn deinit(self: *ControlCompStorage) void {
+        self.data.deinit();
+        self.indexToEntity.deinit();
+        self.entityToIndex.deinit();
+    }
+};
+
 pub const TransformCompStorage = struct {
     data: std.ArrayList(TransformComp),
     entityToIndex: std.AutoHashMap(usize, usize),

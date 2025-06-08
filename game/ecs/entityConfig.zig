@@ -1,6 +1,7 @@
 const std = @import("std");
 const rend = @import("types.zig").rend;
 
+// MARK: Transform and Shapes
 pub const CircleConfig = struct {
     offset: ?rend.Point = rend.Point{ .x = 0, .y = 0 }, // Translation away from the origin
     rotation: ?f32 = null,

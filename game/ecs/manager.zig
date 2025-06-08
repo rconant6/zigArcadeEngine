@@ -6,6 +6,8 @@ const EntityConfig = types.EntityConfig;
 const EntityHandle = types.EntityHandle;
 const ComponentTag = types.ComponentTag;
 const ComponentType = types.ComponentType;
+const ControlComp = types.ControlComp;
+const ControlCompStorage = types.ControlCompStorage;
 const TransformComp = types.TransformComp;
 const TransformCompStorage = types.TransformCompStorage;
 const RenderComp = types.RenderComp;
@@ -23,6 +25,7 @@ pub const EntityManager = struct {
     // component storage
     transform: TransformCompStorage, // transform - pos, rot, scale
     render: RenderCompStorage,
+    control: ControlCompStorage,
     // physics - speed / accel data for movement
     // collision - data needed for collisions
     // ai - stuff needed for enemy control
@@ -120,13 +123,24 @@ pub const EntityManager = struct {
         switch (cType) {
             .Transform => return self.addTransform(entity, cType.Transform),
             .Render => return self.addRender(entity, cType.Render),
+            .Control => return self.addControl(entity, cType.Control),
         }
     }
 
+    fn addControl(self: *EntityManager, entity: Entity, comp: ControlComp) !bool {
+        if (self.control.entityToIndex.get(entity.id)) |_| return false;
+
+        const index = self.control.data.items.len;
+        try self.control.data.append(comp);
+        try self.control.entityToIndex.put(entity.id, index); // store the index for the entity
+        try self.control.indexToEntity.append(entity.id); // keep the same index store the entity for revLookup
+        std.debug.assert(self.control.indexToEntity.items.len == self.control.data.items.len);
+        return true;
+    }
+
     fn addTransform(self: *EntityManager, entity: Entity, comp: TransformComp) !bool {
-        if (self.transform.entityToIndex.get(entity.id)) |_| {
-            return false;
-        }
+        if (self.transform.entityToIndex.get(entity.id)) |_| return false;
+
         // insert into the storage
         const index = self.transform.data.items.len; // old len (next insert)
         try self.transform.data.append(comp); // put it in the dense array
@@ -137,9 +151,8 @@ pub const EntityManager = struct {
     }
 
     fn addRender(self: *EntityManager, entity: Entity, comp: RenderComp) !bool {
-        if (self.render.entityToIndex.get(entity.id)) |_| {
-            return false;
-        }
+        if (self.render.entityToIndex.get(entity.id)) |_| return false;
+
         // insert into the storage
         const index = self.render.data.items.len; // old len (next insert)
         try self.render.data.append(comp); // put it in the dense array
@@ -157,13 +170,31 @@ pub const EntityManager = struct {
         switch (cTag) {
             .Transform => return try self.removeTransform(entity),
             .Render => return try self.removeRender(entity),
+            .Control => return try self.removeControl(entity),
         }
     }
 
+    fn removeControl(self: *EntityManager, entity: Entity) !bool {
+        const remIndex = self.control.entityToIndex.get(entity.id) orelse return false;
+
+        const lastControl = self.control.data.pop() orelse return false;
+        const lastEntity = self.control.indexToEntity.pop() orelse return false;
+
+        _ = self.control.entityToIndex.remove(entity.id);
+
+        if (remIndex < self.control.data.items.len) {
+            self.control.data.items[remIndex] = lastControl;
+            self.control.indexToEntity.items[remIndex] = lastEntity;
+
+            try self.control.entityToIndex.put(lastEntity, remIndex);
+        }
+
+        std.debug.assert(self.control.indexToEntity.items.len == self.control.data.items.len);
+        return true;
+    }
+
     fn removeTransform(self: *EntityManager, entity: Entity) !bool {
-        const remIndex = self.transform.entityToIndex.get(entity.id) orelse {
-            return false;
-        };
+        const remIndex = self.transform.entityToIndex.get(entity.id) orelse return false;
 
         const lastTransform = self.transform.data.pop() orelse return false;
         const lastEntity = self.transform.indexToEntity.pop() orelse return false;
@@ -182,9 +213,7 @@ pub const EntityManager = struct {
     }
 
     fn removeRender(self: *EntityManager, entity: Entity) !bool {
-        const remIndex = self.render.entityToIndex.get(entity.id) orelse {
-            return false;
-        };
+        const remIndex = self.render.entityToIndex.get(entity.id) orelse return false;
 
         const lastTransform = self.render.data.pop() orelse return false;
         const lastEntity = self.render.indexToEntity.pop() orelse return false;
@@ -262,6 +291,7 @@ pub const EntityManager = struct {
 
         const tstorage = try TransformCompStorage.init(alloc);
         const rstorage = try RenderCompStorage.init(alloc);
+        const cstorage = try ControlCompStorage.init(alloc);
         return .{
             .counter = 0,
             .arena = std.heap.ArenaAllocator.init(alloc.*),
@@ -269,12 +299,14 @@ pub const EntityManager = struct {
             .generations = gens,
             .transform = tstorage,
             .render = rstorage,
+            .control = cstorage,
         };
     }
 
     pub fn deinit(self: *EntityManager) void {
         self.freeIds.deinit();
         self.generations.deinit();
+        self.control.deinit();
         self.transform.deinit();
         self.render.deinit();
         self.arena.deinit();
