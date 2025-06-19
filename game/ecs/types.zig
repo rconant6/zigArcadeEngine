@@ -16,6 +16,11 @@ pub const PlayerCompStorage = storage.PlayerCompStorage;
 pub const RenderCompStorage = storage.RenderCompStorage;
 pub const TransformCompStorage = storage.TransformCompStorage;
 
+const command = @import("commands.zig");
+pub const InputCommand = command.InputCommand;
+pub const Command = command.Command;
+pub const EntityCommand = command.EntityCommand;
+
 // MARK: Types
 pub const ComponentTag = enum {
     Control,

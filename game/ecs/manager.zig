@@ -1,7 +1,9 @@
 const std = @import("std");
 
 const types = @import("types.zig");
+const Command = types.Command;
 const Entity = types.Entity;
+const EntityCommand = types.EntityCommand;
 const EntityConfig = types.EntityConfig;
 const EntityHandle = types.EntityHandle;
 const ComponentTag = types.ComponentTag;
@@ -18,11 +20,15 @@ const ShapeData = types.rend.ShapeData;
 
 const Renderer = types.rend.Renderer;
 
+const KeyEvent = @import("../bridge.zig").KeyEvent;
+
 pub const EntityManager = struct {
     counter: usize,
     freeIds: std.fifo.LinearFifo(usize, .Dynamic),
     generations: std.ArrayList(u16),
     arena: std.heap.ArenaAllocator,
+
+    commandQueue: std.ArrayList(EntityCommand),
 
     // component storage
     transform: TransformCompStorage, // transform - pos, rot, scale
@@ -41,12 +47,58 @@ pub const EntityManager = struct {
     // aiSys
     // shootingSys
 
-    // MARK: Wrappers for easier use
+    // MARK: Public API for entity creation and component addition
     pub fn addEntity(self: *EntityManager) !EntityHandle {
         return .{
             .entity = try self.createEntity(),
             .manager = self,
         };
+    }
+    pub fn addEntityWithConfigs(
+        self: *EntityManager,
+        renderConfig: ?EntityConfig.ShapeConfigs,
+        controlConfig: ?EntityConfig.ControllableConfig,
+    ) !EntityHandle {
+        const entity = try self.createEntity();
+        var tComp = false;
+        var cComp = false;
+        var pComp = false;
+        var rComp = false;
+
+        if (renderConfig) |rc| {
+            const transform = try extractTransform(rc);
+            const shape = try self.extractShape(rc);
+            tComp = try self.addTransform(entity, transform);
+            rComp = try self.addRender(entity, .{ .shapeData = shape, .visible = true });
+        }
+
+        if (controlConfig) |cc| {
+            const control = try self.extractControl(cc);
+            const player = try self.extractPlayer(cc);
+            cComp = try self.addComponent(entity, .{ .Control = control });
+            pComp = try self.addComponent(entity, .{ .Player = player });
+        }
+
+        if (tComp and rComp and cComp and pComp)
+            return .{ .entity = entity, .manager = self };
+
+        try self.destroyEntity(entity);
+        return error.ComponentAddtionFailed;
+    }
+
+    pub fn addControllableEntity(self: *EntityManager, config: EntityConfig.ControllableConfig) !EntityHandle {
+        const player = self.extractPlayer(config);
+        const control = self.extractControl(config);
+
+        const entity = self.createEntity();
+
+        const pAdd = self.addPlayer(entity, player);
+        const cAdd = self.addControl(entity, control);
+
+        if (pAdd and cAdd) return .{ .entity = entity, .manager = self };
+
+        try self.destroyEntity(entity);
+        return error.ComponentAdditionFailed;
     }
 
     pub fn addRenderableEntity(self: *EntityManager, config: EntityConfig.ShapeConfigs) !EntityHandle {
@@ -64,6 +116,135 @@ pub const EntityManager = struct {
 
         try self.destroyEntity(entity);
         return error.ComponentAdditionFailed;
+    }
+
+    pub fn addComponent(self: *EntityManager, entity: Entity, cType: ComponentType) !bool {
+        if (!self.isEntityValid(entity)) {
+            return false;
+        }
+        switch (cType) {
+            .Control => return self.addControl(entity, cType.Control),
+            .Player => return self.addPlayer(entity, cType.Player),
+            .Render => return self.addRender(entity, cType.Render),
+            .Transform => return self.addTransform(entity, cType.Transform),
+        }
+    }
+
+    pub fn processKeyEvent(self: *EntityManager, keyEvent: KeyEvent, dt: f32) void {
+        if (!keyEvent.isPressed) return;
+
+        switch (keyEvent.keyCode) {
+            .A, .D, .W, .Space => {
+                for (self.player.indexToEntity.items) |entityID| {
+                    if (self.control.entityToIndex.get(entityID)) |controlIndex| {
+                        const controlComp = self.control.data.items[controlIndex];
+                        const entity = Entity.init(entityID, self.generations.items[entityID]);
+
+                        const command: EntityCommand = switch (keyEvent.keyCode) {
+                            .A => .{ .entity = entity, .command = .{ .Input = .{ .Rotate = -(controlComp.rotationRate orelse 0) * dt } } },
+                            .D => .{ .entity = entity, .command = .{ .Input = .{ .Rotate = (controlComp.rotationRate orelse 0) * dt } } },
+                            .W => .{ .entity = entity, .command = .{ .Input = .{ .Thrust = (controlComp.thrustForce orelse 0) * dt } } },
+                            .Space => .{ .entity = entity, .command = .{ .Input = .{ .Shoot = {} } } },
+                            else => unreachable,
+                        };
+
+                        std.debug.print("command = {}\n", .{command});
+                        self.queueCommand(command) catch |err| {
+                            std.debug.print(
+                                "Unable to create command for keyEvent: {} on entityID: {} with error: {}\n",
+                                .{ keyEvent, .entityID, err },
+                            );
+                        };
+                    }
+                }
+            },
+            else => return,
+        }
+    }
+
+    fn queueCommand(self: *EntityManager, command: EntityCommand) !void {
+        if (self.commandQueue.capacity > self.commandQueue.items.len) {
+            self.commandQueue.appendAssumeCapacity(command);
+        } else {
+            try self.commandQueue.append(command);
+        }
+    }
+
+    fn processCommands(self: *EntityManager) void {
+        for (self.commandQueue.items) |command| {
+            if (self.isEntityValid(command.entity)) {
+                switch (command.command) {
+                    .Input => |ic| {
+                        switch (ic) {
+                            .Rotate => |r| {
+                                if (self.transform.entityToIndex.get(command.entity.id)) |index| {
+                                    const transform = &self.transform.data.items[index];
+
+                                    if (transform.transform.rotation) |*rot| {
+                                        rot.* += r;
+                                        std.debug.print("rotating\n", .{});
+                                    } else {
+                                        transform.transform.rotation = r;
+                                    }
+                                }
+                            },
+                            .Thrust => |t| {
+                                _ = t;
+                                std.log.default.err("Unimplemented Thrust Command\n", .{});
+                            },
+                            .Shoot => |s| {
+                                _ = s;
+                                std.log.default.err("Unimplemented Shoot Command\n", .{});
+                            },
+                        }
+                    },
+                }
+            }
+        }
+    }
+
+    pub fn clearCommands(self: *EntityManager) void {
+        self.commandQueue.clearRetainingCapacity();
+    }
+
+    pub fn removeComponent(self: *EntityManager, entity: Entity, cTag: ComponentTag) !bool {
+        if (!self.isEntityValid(entity)) {
+            return false;
+        }
+        switch (cTag) {
+            .Control => return try self.removeControl(entity),
+            .Player => return try self.removePlayer(entity),
+            .Render => return try self.removeRender(entity),
+            .Transform => return try self.removeTransform(entity),
+        }
+    }
+
+    // MARK: Private helpers
+
+    fn createEntity(self: *EntityManager) !Entity {
+        if (self.freeIds.readItem()) |id| {
+            std.debug.assert(id < self.generations.items.len);
+
+            return Entity.init(id, self.generations.items[id]);
+        } else {
+            const id = self.counter;
+            try self.generations.append(0);
+            self.counter += 1;
+            std.debug.assert(id < self.generations.items.len);
+            return Entity.init(id, 0);
+        }
+    }
+
+    fn destroyEntity(self: *EntityManager, entity: Entity) !void {
+        std.debug.assert(self.isEntityValid(entity));
+
+        inline for (@typeInfo(ComponentTag).@"enum".fields) |field| {
+            const tag: ComponentTag = @enumFromInt(field.value);
+            _ = try self.removeComponent(entity, tag); //catch {
+        }
+
+        self.generations.items[entity.id] += 1;
+        self.freeIds.writeItemAssumeCapacity(entity.id);
     }
 
     fn extractShape(self: *EntityManager, config: EntityConfig.ShapeConfigs) !ShapeData {
@@ -102,32 +283,41 @@ pub const EntityManager = struct {
         };
     }
 
-    fn extractTransform(config: anytype) !TransformComp {
-        if (config.scale) |scale| if (scale < 0) return error.InvalidScaleParameter;
-
-        if (@hasField(@TypeOf(config), "radius")) {
-            if (@field(config, "radius") <= 0) return error.InvalidRadiusParameter;
-        }
-
-        return TransformComp{
-            .transform = .{
-                .offset = @field(config, "offset"),
-                .rotation = @field(config, "rotation"),
-                .scale = @field(config, "scale"),
-            },
+    fn extractPlayer(self: *EntityManager, config: anytype) !PlayerComp {
+        _ = self;
+        const id = @field(config, "playerID") orelse return error.InvalidConfig;
+        return PlayerComp{
+            .playerID = id,
         };
     }
-    // MARK: Component interface
-    pub fn addComponent(self: *EntityManager, entity: Entity, cType: ComponentType) !bool {
-        // validate the entity
-        if (!self.isEntityValid(entity)) {
-            return false;
-        }
-        switch (cType) {
-            .Control => return self.addControl(entity, cType.Control),
-            .Player => return self.addPlayer(entity, cType.Player),
-            .Render => return self.addRender(entity, cType.Render),
-            .Transform => return self.addTransform(entity, cType.Transform),
+
+    fn extractControl(self: *EntityManager, config: anytype) !ControlComp {
+        _ = self;
+        return ControlComp{
+            .rotationRate = @field(config, "rotationRate"),
+            .thrustForce = @field(config, "thrustForce"),
+            .shotRate = @field(config, "shotRate"),
+        };
+    }
+
+    fn extractTransform(config: anytype) !TransformComp {
+        switch (config) {
+            inline else => |c| {
+                if (@hasField(@TypeOf(c), "scale")) {
+                    if (c.scale) |scale| if (scale < 0) return error.InvalidScaleParameter;
+                }
+                if (@hasField(@TypeOf(c), "radius")) {
+                    if (@field(c, "radius") <= 0) return error.InvalidRadiusParameter;
+                }
+
+                return TransformComp{
+                    .transform = .{
+                        .offset = @field(c, "offset"),
+                        .rotation = @field(c, "rotation"),
+                        .scale = @field(c, "scale"),
+                    },
+                };
+            },
         }
     }
 
@@ -178,18 +368,6 @@ pub const EntityManager = struct {
     }
 
     // MARK: Removal
-    pub fn removeComponent(self: *EntityManager, entity: Entity, cTag: ComponentTag) !bool {
-        if (!self.isEntityValid(entity)) {
-            return false;
-        }
-        switch (cTag) {
-            .Control => return try self.removeControl(entity),
-            .Player => return try self.removePlayer(entity),
-            .Render => return try self.removeRender(entity),
-            .Transform => return try self.removeTransform(entity),
-        }
-    }
-
     fn removePlayer(self: *EntityManager, entity: Entity) !bool {
         const remIndex = self.player.entityToIndex.get(entity.id) orelse return false;
 
@@ -266,46 +444,11 @@ pub const EntityManager = struct {
         return true;
     }
 
-    // MARK: Entity interface
-    pub fn createEntity(self: *EntityManager) !Entity {
-        if (self.freeIds.readItem()) |id| {
-            // recycled ID path
-            std.debug.assert(id < self.generations.items.len);
-
-            return Entity.init(id, self.generations.items[id]);
-        } else {
-            // new ID path
-            const id = self.counter;
-            try self.generations.append(0);
-            self.counter += 1;
-            std.debug.assert(id < self.generations.items.len);
-            return Entity.init(id, 0);
-        }
-    }
-
-    pub fn destroyEntity(self: *EntityManager, entity: Entity) !void {
-        std.debug.assert(self.isEntityValid(entity));
-
-        inline for (@typeInfo(ComponentTag).@"enum".fields) |field| {
-            const tag: ComponentTag = @enumFromInt(field.value);
-            _ = try self.removeComponent(entity, tag); //catch {
-        }
-
-        self.generations.items[entity.id] += 1;
-        self.freeIds.writeItemAssumeCapacity(entity.id);
-    }
-
     pub fn isEntityValid(self: *const EntityManager, entity: Entity) bool {
         return entity.id < self.counter and
             entity.generation == self.generations.items[entity.id];
     }
     // MARK: Systems interface
-    pub fn update(self: *EntityManager, dt: f32) void {
-        _ = dt;
-        _ = self;
-        // do all the updates through the systems
-    }
-
     pub fn renderSystem(self: *EntityManager, renderer: *Renderer) void {
         for (self.transform.indexToEntity.items, 0..) |entityID, transformIndex| {
             if (self.render.entityToIndex.get(entityID)) |renderIndex| {
@@ -318,16 +461,23 @@ pub const EntityManager = struct {
         }
     }
 
+    pub fn inputSystem(self: *EntityManager) void {
+        self.processCommands();
+        self.clearCommands();
+    }
+
     // MARK: Memory management
     pub fn init(alloc: *std.mem.Allocator) !EntityManager {
         var nextList = std.fifo.LinearFifo(usize, .Dynamic).init(alloc.*);
         try nextList.ensureTotalCapacity(1024);
         const gens = std.ArrayList(u16).init(alloc.*);
+        const commandStorage = try std.ArrayList(EntityCommand).initCapacity(alloc.*, 10);
 
         const tstorage = try TransformCompStorage.init(alloc);
         const rstorage = try RenderCompStorage.init(alloc);
         const cstorage = try ControlCompStorage.init(alloc);
         const pstorage = try PlayerCompStorage.init(alloc);
+
         return .{
             .counter = 0,
             .arena = std.heap.ArenaAllocator.init(alloc.*),
@@ -337,6 +487,7 @@ pub const EntityManager = struct {
             .render = rstorage,
             .control = cstorage,
             .player = pstorage,
+            .commandQueue = commandStorage,
         };
     }
 
@@ -348,5 +499,6 @@ pub const EntityManager = struct {
         self.transform.deinit();
         self.render.deinit();
         self.arena.deinit();
+        self.commandQueue.deinit();
     }
 };

@@ -1,6 +1,14 @@
 const std = @import("std");
 const rend = @import("types.zig").rend;
 
+// MARK: Controls / Player configs
+pub const ControllableConfig = struct {
+    playerID: ?u8 = null,
+    rotationRate: ?f32 = null,
+    thrustForce: ?f32 = null,
+    shotRate: ?f32 = null,
+};
+
 // MARK: Transform and Shapes
 pub const CircleConfig = struct {
     offset: ?rend.Point = rend.Point{ .x = 0, .y = 0 }, // Translation away from the origin
