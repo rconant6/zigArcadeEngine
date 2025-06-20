@@ -17,6 +17,8 @@ const TransformCompStorage = types.TransformCompStorage;
 const RenderComp = types.RenderComp;
 const RenderCompStorage = types.RenderCompStorage;
 const ShapeData = types.rend.ShapeData;
+const InputManager = types.InputManager;
+const InputWrapper = types.InputWrapper;
 
 const Renderer = types.rend.Renderer;
 
@@ -130,44 +132,31 @@ pub const EntityManager = struct {
         }
     }
 
-    pub fn processKeyEvent(self: *EntityManager, keyEvent: KeyEvent, dt: f32) void {
-        if (!keyEvent.isPressed) return;
+    fn generateCommands(self: *EntityManager, inputManager: *InputManager, dt: f32) void {
+        var count: usize = 0;
+        var controllables: [5]InputWrapper = undefined;
 
-        switch (keyEvent.keyCode) {
-            .A, .D, .W, .Space => {
-                for (self.player.indexToEntity.items) |entityID| {
-                    if (self.control.entityToIndex.get(entityID)) |controlIndex| {
-                        const controlComp = self.control.data.items[controlIndex];
-                        const entity = Entity.init(entityID, self.generations.items[entityID]);
-
-                        const command: EntityCommand = switch (keyEvent.keyCode) {
-                            .A => .{ .entity = entity, .command = .{ .Input = .{ .Rotate = -(controlComp.rotationRate orelse 0) * dt } } },
-                            .D => .{ .entity = entity, .command = .{ .Input = .{ .Rotate = (controlComp.rotationRate orelse 0) * dt } } },
-                            .W => .{ .entity = entity, .command = .{ .Input = .{ .Thrust = (controlComp.thrustForce orelse 0) * dt } } },
-                            .Space => .{ .entity = entity, .command = .{ .Input = .{ .Shoot = {} } } },
-                            else => unreachable,
-                        };
-
-                        std.debug.print("command = {}\n", .{command});
-                        self.queueCommand(command) catch |err| {
-                            std.debug.print(
-                                "Unable to create command for keyEvent: {} on entityID: {} with error: {}\n",
-                                .{ keyEvent, .entityID, err },
-                            );
-                        };
-                    }
+        for (self.player.indexToEntity.items) |entityID| {
+            if (self.control.entityToIndex.get(entityID)) |entity| {
+                const control = self.control.data.items[entity];
+                const rotRate = control.rotationRate orelse 0;
+                const thrustForce = control.thrustForce orelse 0;
+                if (rotRate != 0 or thrustForce != 0) {
+                    controllables[count] = InputWrapper{
+                        .entity = Entity.init(entityID, self.generations.items[entityID]),
+                        .rotationRate = rotRate,
+                        .thrustForce = thrustForce,
+                    };
+                    count += 1;
                 }
-            },
-            else => return,
+            }
         }
-    }
 
-    fn queueCommand(self: *EntityManager, command: EntityCommand) !void {
-        if (self.commandQueue.capacity > self.commandQueue.items.len) {
-            self.commandQueue.appendAssumeCapacity(command);
-        } else {
-            try self.commandQueue.append(command);
-        }
+        inputManager.generateCommands(
+            controllables[0..count],
+            dt,
+            &self.commandQueue,
+        );
     }
 
     fn processCommands(self: *EntityManager) void {
@@ -181,8 +170,9 @@ pub const EntityManager = struct {
                                     const transform = &self.transform.data.items[index];
 
                                     if (transform.transform.rotation) |*rot| {
-                                        rot.* += r;
-                                        std.debug.print("rotating\n", .{});
+                                        const angle = @mod(rot.* + r, 2 * std.math.pi);
+                                        // const angle = rot.* + r;
+                                        rot.* = angle;
                                     } else {
                                         transform.transform.rotation = r;
                                     }
@@ -201,9 +191,6 @@ pub const EntityManager = struct {
                 }
             }
         }
-    }
-
-    pub fn clearCommands(self: *EntityManager) void {
         self.commandQueue.clearRetainingCapacity();
     }
 
@@ -461,9 +448,9 @@ pub const EntityManager = struct {
         }
     }
 
-    pub fn inputSystem(self: *EntityManager) void {
+    pub fn inputSystem(self: *EntityManager, inputManager: *InputManager, dt: f32) void {
+        self.generateCommands(inputManager, dt);
         self.processCommands();
-        self.clearCommands();
     }
 
     // MARK: Memory management
@@ -471,7 +458,7 @@ pub const EntityManager = struct {
         var nextList = std.fifo.LinearFifo(usize, .Dynamic).init(alloc.*);
         try nextList.ensureTotalCapacity(1024);
         const gens = std.ArrayList(u16).init(alloc.*);
-        const commandStorage = try std.ArrayList(EntityCommand).initCapacity(alloc.*, 10);
+        const commandStorage = try std.ArrayList(EntityCommand).initCapacity(alloc.*, 20);
 
         const tstorage = try TransformCompStorage.init(alloc);
         const rstorage = try RenderCompStorage.init(alloc);

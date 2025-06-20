@@ -3,6 +3,7 @@ pub const Entity = @import("entity.zig").Entity;
 pub const EntityConfig = @import("entityConfig.zig");
 pub const EntityHandle = @import("entityHandle.zig").EntityHandle;
 pub const EntityManager = @import("manager.zig").EntityManager;
+pub const InputManager = @import("../inputManager.zig").InputManager;
 
 const comps = @import("components.zig");
 pub const ControlComp = comps.ControlComp;
@@ -20,6 +21,7 @@ const command = @import("commands.zig");
 pub const InputCommand = command.InputCommand;
 pub const Command = command.Command;
 pub const EntityCommand = command.EntityCommand;
+pub const InputWrapper = command.InputWrapper;
 
 // MARK: Types
 pub const ComponentTag = enum {
