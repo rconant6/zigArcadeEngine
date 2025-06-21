@@ -19,6 +19,8 @@ const RenderCompStorage = types.RenderCompStorage;
 const ShapeData = types.rend.ShapeData;
 const InputManager = types.InputManager;
 const InputWrapper = types.InputWrapper;
+const VelocityComp = types.VelocityComp;
+const VelocityCompStorage = types.VelocityCompStorage;
 
 const Renderer = types.rend.Renderer;
 
@@ -37,6 +39,7 @@ pub const EntityManager = struct {
     render: RenderCompStorage,
     control: ControlCompStorage,
     player: PlayerCompStorage,
+    velocity: VelocityCompStorage,
     // physics - speed / accel data for movement
     // collision - data needed for collisions
     // ai - stuff needed for enemy control
@@ -129,6 +132,7 @@ pub const EntityManager = struct {
             .Player => return self.addPlayer(entity, cType.Player),
             .Render => return self.addRender(entity, cType.Render),
             .Transform => return self.addTransform(entity, cType.Transform),
+            .Velocity => return self.addVelocity(entity, cType.Velocity),
         }
     }
 
@@ -203,6 +207,7 @@ pub const EntityManager = struct {
             .Player => return try self.removePlayer(entity),
             .Render => return try self.removeRender(entity),
             .Transform => return try self.removeTransform(entity),
+            .Velocity => return try self.removeVelocity(entity),
         }
     }
 
@@ -330,6 +335,18 @@ pub const EntityManager = struct {
         return true;
     }
 
+    fn addVelocity(self: *EntityManager, entity: Entity, comp: VelocityComp) !bool {
+        if (self.velocity.entityToIndex.get(entity.id)) |_| return false;
+
+        // insert into the storage
+        const index = self.velocity.data.items.len; // old len (next insert)
+        try self.velocity.data.append(comp); // put it in the dense array
+        try self.velocity.entityToIndex.put(entity.id, index); // store the index for the entity
+        try self.velocity.indexToEntity.append(entity.id); // keep the same index store the entity for revLookup
+        std.debug.assert(self.velocity.indexToEntity.items.len == self.velocity.data.items.len);
+        return true;
+    }
+
     fn addTransform(self: *EntityManager, entity: Entity, comp: TransformComp) !bool {
         if (self.transform.entityToIndex.get(entity.id)) |_| return false;
 
@@ -390,6 +407,25 @@ pub const EntityManager = struct {
         }
 
         std.debug.assert(self.control.indexToEntity.items.len == self.control.data.items.len);
+        return true;
+    }
+
+    fn removeVelocity(self: *EntityManager, entity: Entity) !bool {
+        const remIndex = self.velocity.entityToIndex.get(entity.id) orelse return false;
+
+        const lastVelocity = self.velocity.data.pop() orelse return false;
+        const lastEntity = self.velocity.indexToEntity.pop() orelse return false;
+
+        _ = self.velocity.entityToIndex.remove(entity.id);
+
+        if (remIndex < self.velocity.data.items.len) {
+            self.velocity.data.items[remIndex] = lastVelocity;
+            self.velocity.indexToEntity.items[remIndex] = lastEntity;
+
+            try self.velocity.entityToIndex.put(lastEntity, remIndex);
+        }
+
+        std.debug.assert(self.velocity.indexToEntity.items.len == self.velocity.data.items.len);
         return true;
     }
 
@@ -464,6 +500,7 @@ pub const EntityManager = struct {
         const rstorage = try RenderCompStorage.init(alloc);
         const cstorage = try ControlCompStorage.init(alloc);
         const pstorage = try PlayerCompStorage.init(alloc);
+        const vstorage = try VelocityCompStorage.init(alloc);
 
         return .{
             .counter = 0,
@@ -474,6 +511,7 @@ pub const EntityManager = struct {
             .render = rstorage,
             .control = cstorage,
             .player = pstorage,
+            .velocity = vstorage,
             .commandQueue = commandStorage,
         };
     }
@@ -484,6 +522,7 @@ pub const EntityManager = struct {
         self.player.deinit();
         self.control.deinit();
         self.transform.deinit();
+        self.velocity.deinit();
         self.render.deinit();
         self.arena.deinit();
         self.commandQueue.deinit();

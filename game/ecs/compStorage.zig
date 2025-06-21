@@ -6,6 +6,27 @@ const ControlComp = types.ControlComp;
 const PlayerComp = types.PlayerComp;
 const RenderComp = types.RenderComp;
 const TransformComp = types.TransformComp;
+const VelocityComp = types.VelocityComp;
+
+pub const VelocityCompStorage = struct {
+    data: std.ArrayList(VelocityComp),
+    entityToIndex: std.AutoHashMap(usize, usize),
+    indexToEntity: std.ArrayList(usize),
+
+    pub fn init(alloc: *std.mem.Allocator) !VelocityCompStorage {
+        return .{
+            .data = std.ArrayList(VelocityComp).init(alloc.*),
+            .entityToIndex = std.AutoHashMap(usize, usize).init(alloc.*),
+            .indexToEntity = std.ArrayList(usize).init(alloc.*),
+        };
+    }
+
+    pub fn deinit(self: *VelocityCompStorage) void {
+        self.data.deinit();
+        self.indexToEntity.deinit();
+        self.entityToIndex.deinit();
+    }
+};
 
 pub const PlayerCompStorage = struct {
     data: std.ArrayList(PlayerComp),
