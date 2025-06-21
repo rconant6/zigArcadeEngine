@@ -190,7 +190,11 @@ pub const EntityManager = struct {
                                         const transform = &self.transform.data.items[transformIndex];
                                         const velocity = &self.velocity.data.items[velocityIndex];
                                         const rotation = transform.transform.rotation orelse 0;
-                                        const thrustDirection = V2{ .x = std.math.cos(rotation), .y = std.math.sin(rotation) };
+                                        const adjustedRotation = rotation + std.math.pi * 0.5;
+                                        const thrustDirection = V2{
+                                            .x = std.math.cos(adjustedRotation),
+                                            .y = std.math.sin(adjustedRotation),
+                                        };
                                         const thrustVector = thrustDirection.mul(t);
                                         velocity.velocity = velocity.velocity.add(thrustVector);
                                     }
@@ -497,6 +501,24 @@ pub const EntityManager = struct {
     pub fn inputSystem(self: *EntityManager, inputManager: *InputManager, dt: f32) void {
         self.generateCommands(inputManager, dt);
         self.processCommands();
+    }
+
+    pub fn physicsSystem(self: *EntityManager, dt: f32) void {
+        for (self.velocity.indexToEntity.items, 0..) |entityID, velocityIndex| {
+            if (self.transform.entityToIndex.get(entityID)) |transformIndex| {
+                const transform = &self.transform.data.items[transformIndex];
+                const velocity = self.velocity.data.items[velocityIndex].velocity.mul(dt);
+                if (transform.*.transform.offset) |*off| {
+                    off.x += velocity.x;
+                    off.y += velocity.y;
+
+                    if (off.x > 1.0) off.x = -1;
+                    if (off.x < -1.0) off.x = 1;
+                    if (off.y > 1.0) off.y = -1;
+                    if (off.y < -1.0) off.y = 1;
+                }
+            }
+        }
     }
 
     // MARK: Memory management
