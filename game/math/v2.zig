@@ -32,4 +32,8 @@ pub const V2 = struct {
     pub fn distance(self: V2, other: V2) f32 {
         return (self.sub(other)).magnitude();
     }
+
+    pub fn zero() V2 {
+        return .{ .x = 0, .y = 0 };
+    }
 };

@@ -1,1 +1,1 @@
-pub const V2 = @import("game/math/v2.zig");
+pub const V2 = @import("math/v2.zig").V2;
