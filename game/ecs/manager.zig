@@ -1,5 +1,8 @@
 const std = @import("std");
 
+const math = @import("../math.zig");
+const V2 = math.V2;
+
 const types = @import("types.zig");
 const Command = types.Command;
 const Entity = types.Entity;
@@ -175,7 +178,6 @@ pub const EntityManager = struct {
 
                                     if (transform.transform.rotation) |*rot| {
                                         const angle = @mod(rot.* + r, 2 * std.math.pi);
-                                        // const angle = rot.* + r;
                                         rot.* = angle;
                                     } else {
                                         transform.transform.rotation = r;
@@ -183,8 +185,16 @@ pub const EntityManager = struct {
                                 }
                             },
                             .Thrust => |t| {
-                                _ = t;
-                                std.log.default.err("Unimplemented Thrust Command\n", .{});
+                                if (self.transform.entityToIndex.get(command.entity.id)) |transformIndex| {
+                                    if (self.velocity.entityToIndex.get(command.entity.id)) |velocityIndex| {
+                                        const transform = &self.transform.data.items[transformIndex];
+                                        const velocity = &self.velocity.data.items[velocityIndex];
+                                        const rotation = transform.transform.rotation orelse 0;
+                                        const thrustDirection = V2{ .x = std.math.cos(rotation), .y = std.math.sin(rotation) };
+                                        const thrustVector = thrustDirection.mul(t);
+                                        velocity.velocity = velocity.velocity.add(thrustVector);
+                                    }
+                                }
                             },
                             .Shoot => |s| {
                                 _ = s;

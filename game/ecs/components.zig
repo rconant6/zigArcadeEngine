@@ -1,5 +1,5 @@
 const rend = @import("types.zig").rend;
-const V2 = @import("../math/v2.zig").V2;
+const V2 = @import("../math.zig").V2;
 
 pub const PlayerComp = struct {
     playerID: u8 = 0,
@@ -21,5 +21,5 @@ pub const RenderComp = struct {
 };
 
 pub const VelocityComp = struct {
-    velocity: V2,
+    velocity: V2 = V2.zero(),
 };
