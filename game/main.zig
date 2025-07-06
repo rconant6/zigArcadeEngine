@@ -9,21 +9,24 @@ const GameStateManager = gsm.GameStateManager;
 const ecs = @import("ecs.zig");
 const EntityManager = ecs.EntityManager;
 
+const ipm = @import("inputManager.zig");
+const InputManager = ipm.InputManager;
+
 const rend = @import("renderer");
-// const Circle = rend.Circle;
-// const Color = rend.Color;
-// const Line = rend.Line;
-// const Point = rend.Point;
-// const Rectangle = rend.Rectangle;
 const Renderer = rend.Renderer;
-// const ScreenPoint = rend.ScreenPoint;
-// const Triangle = rend.Triangle;
-// const Polygon = rend.Polygon;
+const Colors = rend.Colors;
+const Point = rend.Point;
+
+const asset = @import("assets.zig");
+const AssetManager = asset.AssetManager;
+const Font = asset.Font;
+
+const math = @import("math.zig");
+const V2 = math.V2;
 
 const Config = struct {
     const TARGET_FPS: f32 = 60.0;
-    const TARGET_FRAME_TIME_NS: i64 = @intFromFloat((1.0 / TARGET_FPS) * std.time.ns_per_s);
-    const F32_NS_PER_S: f32 = @floatFromInt(std.time.ns_per_s);
+    const TARGET_FRAME_TIME_US: i64 = @intFromFloat((1.0 / TARGET_FPS) * 1_000_000);
     const WIDTH: i32 = 1600;
     const HEIGHT: i32 = 900;
 };
@@ -58,347 +61,170 @@ pub fn main() !void {
     };
     defer keyboard.deinit();
 
-    // MARK: Internal stuff that runs the game
-    var stateManager = GameStateManager.init(); // place holder for the engine
+    // MARK: Internal stuff that runs the game will be absorbed by the 'engine'
+    var inputManager = InputManager.init();
+    defer inputManager.deinit();
+
+    var stateManager = GameStateManager.init();
+    defer stateManager.deinit();
+
     var entityManager = EntityManager.init(&allocator) catch |err| {
         std.process.fatal("[MAIN] failed to initialize entity manager: {}\n", .{err});
     };
     defer entityManager.deinit();
+
+    var assetManager = AssetManager.init(&allocator) catch |err| {
+        std.process.fatal("[MAIN] failed to initialize asset manager: {}\n", .{err});
+    };
+    defer assetManager.deinit();
 
     var renderer = Renderer.init(&allocator, Config.WIDTH, Config.HEIGHT) catch |err| {
         std.process.fatal("[MAIN] failed to initialize renderer: {}\n", .{err});
     };
     defer renderer.deinit();
 
-    // Add this code to your main.zig after creating the entityManager and before the main loop
+    // const font = try assetManager.loadFont("Silkscreen", "fonts/Silkscreen.ttf"); // assumes assets are in /resources/
+    // const font = try assetManager.loadFont("Pixelify", "fonts/PixelifySans.ttf"); // assumes assets are in /resources/
+    // const font = try assetManager.loadFont("SpaceMono", "fonts/SpaceMono.ttf"); // assumes assets are in /resources/
+    const font = try assetManager.loadFont("Orbicon", "fonts/Orbitron.ttf"); // assumes assets are in /resources/
+    // const font = try assetManager.loadFont("Arcade", "fonts/arcadeFont.ttf"); // assumes assets are in /resources/
+    // defer font.deinit();
+    _ = font;
+    // font.print();
 
-    // MARK: Create Comprehensive Test Entities for Transform System
-    std.debug.print("[MAIN] Creating comprehensive test entities...\n", .{});
+    // Top-left 'I' (ASCII 73 -> index 41)
+    // if (font.glyphShapes[41][0]) |iGlyph| {
+    //     var iPolygon = iGlyph;
+    //     iPolygon.fillColor = rend.Colors.WHITE;
+    //     const iEntity = try entityManager.addEntity();
+    //     _ = try entityManager.addTransform(iEntity.entity, .{ .transform = .{ .offset = rend.Point.init(0.0, 0.0) } });
+    //     _ = try entityManager.addRender(iEntity.entity, .{ .shapeData = .{ .Polygon = iPolygon }, .visible = true });
+    // }
 
-    // ===== POSITION-ONLY ENTITIES =====
-    // Entity 1: Red Circle (right side)
-    const e1 = try entityManager.createEntity();
-    const transform1 = ecs.ComponentType{ .Transform = .{ .transform = rend.Transform{ .pos = rend.Point.init(0.8, 0.6) } } };
-    const circle1 = rend.Circle{
-        .origin = rend.Point.init(0.0, 0.0),
-        .radius = 0.12,
-        .fillColor = rend.Color.init(1.0, 0.2, 0.2, 1.0),
-        .outlineColor = rend.Color.init(0.8, 0.0, 0.0, 1.0),
-    };
-    const render1 = ecs.ComponentType{ .Render = .{ .shapeData = rend.ShapeData{ .Circle = circle1 }, .visible = true } };
-    _ = try entityManager.addComponent(e1, transform1);
-    _ = try entityManager.addComponent(e1, render1);
+    // // For 'I' debug - print the actual transformed points
+    // if (font.glyphShapes[41][0]) |lGlyph| {
+    //     std.debug.print("I [{d}] polygon vertices:\n", .{0});
+    //     for (lGlyph.vertices, 0..) |vertex, i| {
+    //         std.debug.print("  [{d}]: ({d:.3}, {d:.3})\n", .{ i, vertex.x, vertex.y });
+    //     }
+    // }
+    // // Bottom-left 'A' (ASCII 65 -> index 33)
+    // if (font.glyphShapes[33][0]) |aGlyph| {
+    //     var aPolygon = aGlyph;
+    //     aPolygon.fillColor = rend.Colors.GREEN;
+    //     const aEntity = try entityManager.addEntity();
+    //     _ = try entityManager.addTransform(aEntity.entity, .{ .transform = .{ .offset = rend.Point.init(-0.8, -0.8) } });
+    //     _ = try entityManager.addRender(aEntity.entity, .{ .shapeData = .{ .Polygon = aPolygon }, .visible = true });
+    // }
+    // if (font.glyphShapes[33][1]) |aGlyph| {
+    //     var aPolygon = aGlyph;
+    //     aPolygon.fillColor = rend.Colors.RED;
+    //     const aEntity = try entityManager.addEntity();
+    //     _ = try entityManager.addTransform(aEntity.entity, .{ .transform = .{ .offset = rend.Point.init(-0.8, -0.8) } });
+    //     _ = try entityManager.addRender(aEntity.entity, .{ .shapeData = .{ .Polygon = aPolygon }, .visible = true });
+    // }
 
-    // Entity 2: Green Rectangle (top-left)
-    const e2 = try entityManager.createEntity();
-    const transform2 = ecs.ComponentType{ .Transform = .{ .transform = rend.Transform{ .pos = rend.Point.init(-0.7, 0.8) } } };
-    const rect2 = rend.Rectangle{
-        .center = rend.Point.init(0.0, 0.0),
-        .halfWidth = 0.1,
-        .halfHeight = 0.06,
-        .fillColor = rend.Color.init(0.2, 1.0, 0.2, 1.0),
-        .outlineColor = rend.Color.init(0.0, 0.6, 0.0, 1.0),
-    };
-    const render2 = ecs.ComponentType{ .Render = .{ .shapeData = rend.ShapeData{ .Rectangle = rect2 }, .visible = true } };
-    _ = try entityManager.addComponent(e2, transform2);
-    _ = try entityManager.addComponent(e2, render2);
+    // // Bottom-right 'B' (ASCII 66 -> index 34)
+    // if (font.glyphShapes[34][0]) |bGlyph| {
+    //     var bPolygon = bGlyph;
+    //     bPolygon.fillColor = rend.Colors.RED;
+    //     const bEntity = try entityManager.addEntity();
+    //     _ = try entityManager.addTransform(bEntity.entity, .{ .transform = .{ .offset = rend.Point.init(0.8, -0.8) } });
+    //     _ = try entityManager.addRender(bEntity.entity, .{ .shapeData = .{ .Polygon = bPolygon }, .visible = true });
+    // }
 
-    // Entity 3: Blue Triangle (bottom)
-    const e3 = try entityManager.createEntity();
-    const transform3 = ecs.ComponentType{ .Transform = .{ .transform = rend.Transform{ .pos = rend.Point.init(0.0, -0.8) } } };
-    var triangle_points3 = [_]rend.Point{
-        rend.Point.init(0.0, 0.12),
-        rend.Point.init(-0.1, -0.08),
-        rend.Point.init(0.1, -0.08),
-    };
-    const triangle3 = rend.Triangle{
-        .vertices = &triangle_points3,
-        .fillColor = rend.Color.init(0.2, 0.2, 1.0, 1.0),
-        .outlineColor = rend.Color.init(0.0, 0.0, 0.8, 1.0),
-    };
-    const render3 = ecs.ComponentType{ .Render = .{ .shapeData = rend.ShapeData{ .Triangle = triangle3 }, .visible = true } };
-    _ = try entityManager.addComponent(e3, transform3);
-    _ = try entityManager.addComponent(e3, render3);
+    // Top-right 'L' (ASCII 76 -> index 44)
+    // if (font.glyphShapes[44][0]) |lGlyph| {
+    //     var lPolygon = lGlyph;
+    //     lPolygon.fillColor = rend.Colors.YELLOW;
+    //     const lEntity = try entityManager.addEntity();
+    //     _ = try entityManager.addTransform(lEntity.entity, .{ .transform = .{ .offset = rend.Point.init(-0.8, -0.8) } });
+    //     _ = try entityManager.addRender(lEntity.entity, .{ .shapeData = .{ .Polygon = lPolygon }, .visible = true });
+    // }
 
-    // ===== SCALE-ONLY ENTITIES =====
-    // Entity 4: Large Yellow Circle (center-left)
-    const e4 = try entityManager.createEntity();
-    const transform4 = ecs.ComponentType{ .Transform = .{ .transform = rend.Transform{ .pos = rend.Point.init(-0.4, 0.0), .scale = 2.5 } } };
-    const circle4 = rend.Circle{
-        .origin = rend.Point.init(0.0, 0.0),
-        .radius = 0.08,
-        .fillColor = rend.Color.init(1.0, 1.0, 0.3, 1.0),
-        .outlineColor = rend.Color.init(0.8, 0.8, 0.0, 1.0),
-    };
-    const render4 = ecs.ComponentType{ .Render = .{ .shapeData = rend.ShapeData{ .Circle = circle4 }, .visible = true } };
-    _ = try entityManager.addComponent(e4, transform4);
-    _ = try entityManager.addComponent(e4, render4);
+    // // For 'L' debug - print the actual transformed points
+    // if (font.glyphShapes[44][0]) |lGlyph| {
+    //     std.debug.print("L [{d}] polygon vertices:\n", .{0});
+    //     for (lGlyph.vertices, 0..) |vertex, i| {
+    //         std.debug.print("  [{d}]: ({d:.3}, {d:.3})\n", .{ i, vertex.x, vertex.y });
+    //     }
+    // }
 
-    // Entity 5: Tiny Magenta Rectangle (center)
-    const e5 = try entityManager.createEntity();
-    const transform5 = ecs.ComponentType{ .Transform = .{ .transform = rend.Transform{ .pos = rend.Point.init(0.0, 0.0), .scale = 0.4 } } };
-    const rect5 = rend.Rectangle{
-        .center = rend.Point.init(0.0, 0.0),
-        .halfWidth = 0.15,
-        .halfHeight = 0.1,
-        .fillColor = rend.Color.init(1.0, 0.3, 1.0, 1.0),
-        .outlineColor = rend.Color.init(0.8, 0.0, 0.8, 1.0),
-    };
-    const render5 = ecs.ComponentType{ .Render = .{ .shapeData = rend.ShapeData{ .Rectangle = rect5 }, .visible = true } };
-    _ = try entityManager.addComponent(e5, transform5);
-    _ = try entityManager.addComponent(e5, render5);
+    // std.debug.print("ASCII 'L' (76) -> letter index {d} -> glyph index {d}\n", .{ 76 - 32, font.asciiToGlyph[76 - 32] });
 
-    // ===== ROTATION-ONLY ENTITIES =====
-    // Entity 6: Rotated Cyan Rectangle (top-right, 30°)
-    const e6 = try entityManager.createEntity();
-    const transform6 = ecs.ComponentType{
-        .Transform = .{
-            .transform = rend.Transform{
-                .pos = rend.Point.init(0.6, 0.7),
-                .rot = std.math.pi / 6.0, // 30 degrees
+    const ship = try entityManager.addEntityWithConfigs(
+        .{ .Triangle = .{ .fillColor = rend.Colors.BLUE, .outlineColor = rend.Colors.WHITE, .scale = 0.5, .rotation = 0 } },
+        .{ .playerID = 0, .rotationRate = 16, .thrustForce = 1, .shotRate = 4 },
+    );
+    // _ = ship;
+    _ = try entityManager.addComponent(ship.entity, .{ .Velocity = .{ .velocity = V2.zero() } });
+
+    const ship2 = try entityManager.addEntityWithConfigs(
+        .{
+            .Triangle = .{
+                .fillColor = rend.Colors.RED,
+                .outlineColor = rend.Colors.WHITE,
+                .scale = 0.5,
+                .rotation = 0,
+                .offset = rend.Point{ .x = -0.6, .y = -0.6 }, // Lower left position
             },
         },
-    };
-    const rect6 = rend.Rectangle{
-        .center = rend.Point.init(0.0, 0.0),
-        .halfWidth = 0.12,
-        .halfHeight = 0.05,
-        .fillColor = rend.Color.init(0.3, 1.0, 1.0, 1.0),
-        .outlineColor = rend.Color.init(0.0, 0.8, 0.8, 1.0),
-    };
-    const render6 = ecs.ComponentType{ .Render = .{ .shapeData = rend.ShapeData{ .Rectangle = rect6 }, .visible = true } };
-    _ = try entityManager.addComponent(e6, transform6);
-    _ = try entityManager.addComponent(e6, render6);
+        .{
+            .playerID = 1,
+            .rotationRate = 8, // Half the speed of your original (16000)
+            .thrustForce = 2,
+            .shotRate = 4,
+        },
+    );
 
-    // Entity 7: Rotated Orange Triangle (left side, 135°)
-    const e7 = try entityManager.createEntity();
-    const transform7 = ecs.ComponentType{
-        .Transform = .{
-            .transform = rend.Transform{
-                .pos = rend.Point.init(-0.6, -0.3),
-                .rot = 3.0 * std.math.pi / 4.0, // 135 degrees
+    const ship3 = try entityManager.addEntityWithConfigs(
+        .{
+            .Triangle = .{
+                .fillColor = rend.Colors.GREEN,
+                .outlineColor = rend.Colors.WHITE,
+                .scale = 0.5,
+                .rotation = 0,
+                .offset = rend.Point{ .x = 0.6, .y = -0.6 }, // Lower right position
             },
         },
-    };
-    var triangle_points7 = [_]rend.Point{
-        rend.Point.init(0.0, 0.1),
-        rend.Point.init(-0.08, -0.08),
-        rend.Point.init(0.08, -0.08),
-    };
-    const triangle7 = rend.Triangle{
-        .vertices = &triangle_points7,
-        .fillColor = rend.Color.init(1.0, 0.6, 0.2, 1.0),
-        .outlineColor = rend.Color.init(0.8, 0.4, 0.0, 1.0),
-    };
-    const render7 = ecs.ComponentType{ .Render = .{ .shapeData = rend.ShapeData{ .Triangle = triangle7 }, .visible = true } };
-    _ = try entityManager.addComponent(e7, transform7);
-    _ = try entityManager.addComponent(e7, render7);
+        .{
+            .playerID = 2,
+            .rotationRate = 24, // 1.5x faster than original
+            .thrustForce = 1,
+            .shotRate = 4,
+        },
+    );
 
-    // ===== SCALE + ROTATION ENTITIES =====
-    // Entity 8: Large Rotated Pink Circle (bottom-right, 2x + 45°)
-    const e8 = try entityManager.createEntity();
-    const transform8 = ecs.ComponentType{
-        .Transform = .{
-            .transform = rend.Transform{
-                .pos = rend.Point.init(0.5, -0.5),
-                .rot = std.math.pi / 4.0, // 45 degrees
-                .scale = 1.8,
+    const ship4 = try entityManager.addEntityWithConfigs(
+        .{
+            .Triangle = .{
+                .fillColor = rend.Colors.YELLOW,
+                .outlineColor = rend.Colors.WHITE,
+                .scale = 0.5,
+                .rotation = 0,
+                .offset = rend.Point{ .x = -0.6, .y = 0.6 }, // Upper left position
             },
         },
-    };
-    const circle8 = rend.Circle{
-        .origin = rend.Point.init(0.0, 0.0),
-        .radius = 0.07,
-        .fillColor = rend.Color.init(1.0, 0.5, 0.8, 1.0),
-        .outlineColor = rend.Color.init(0.8, 0.2, 0.6, 1.0),
-    };
-    const render8 = ecs.ComponentType{ .Render = .{ .shapeData = rend.ShapeData{ .Circle = circle8 }, .visible = true } };
-    _ = try entityManager.addComponent(e8, transform8);
-    _ = try entityManager.addComponent(e8, render8);
-
-    // Entity 9: Small Rotated Lime Rectangle (top-center, 0.6x + 60°)
-    const e9 = try entityManager.createEntity();
-    const transform9 = ecs.ComponentType{
-        .Transform = .{
-            .transform = rend.Transform{
-                .pos = rend.Point.init(0.2, 0.6),
-                .rot = std.math.pi / 3.0, // 60 degrees
-                .scale = 0.6,
-            },
+        .{
+            .playerID = 3,
+            .rotationRate = 4, // Quarter speed of original
+            .thrustForce = 1.5,
+            .shotRate = 4,
         },
-    };
-    const rect9 = rend.Rectangle{
-        .center = rend.Point.init(0.0, 0.0),
-        .halfWidth = 0.14,
-        .halfHeight = 0.08,
-        .fillColor = rend.Color.init(0.6, 1.0, 0.2, 1.0),
-        .outlineColor = rend.Color.init(0.4, 0.8, 0.0, 1.0),
-    };
-    const render9 = ecs.ComponentType{ .Render = .{ .shapeData = rend.ShapeData{ .Rectangle = rect9 }, .visible = true } };
-    _ = try entityManager.addComponent(e9, transform9);
-    _ = try entityManager.addComponent(e9, render9);
+    );
 
-    // ===== POLYGON TESTS =====
-    // Entity 10: Rotated Pentagon (right side, 72°)
-    const e10 = try entityManager.createEntity();
-    const transform10 = ecs.ComponentType{
-        .Transform = .{
-            .transform = rend.Transform{
-                .pos = rend.Point.init(0.7, -0.2),
-                .rot = 2.0 * std.math.pi / 5.0, // 72 degrees (1/5 rotation)
-                .scale = 1.2,
-            },
-        },
-    };
-    var polygon_points10 = [_]rend.Point{
-        rend.Point.init(0.0, 0.08), // Top
-        rend.Point.init(0.06, 0.03), // Top-right
-        rend.Point.init(0.04, -0.04), // Bottom-right
-        rend.Point.init(-0.04, -0.04), // Bottom-left
-        rend.Point.init(-0.06, 0.03), // Top-left
-    };
-    const polygon10 = rend.Polygon{
-        .vertices = &polygon_points10,
-        .center = rend.Point.init(0.0, 0.0),
-        .fillColor = rend.Color.init(0.8, 0.4, 1.0, 1.0),
-        .outlineColor = rend.Color.init(0.6, 0.2, 0.8, 1.0),
-    };
-    const render10 = ecs.ComponentType{ .Render = .{ .shapeData = rend.ShapeData{ .Polygon = polygon10 }, .visible = true } };
-    _ = try entityManager.addComponent(e10, transform10);
-    _ = try entityManager.addComponent(e10, render10);
-
-    // Entity 11: Hexagon with extreme transforms (left-center, 3x + 90°)
-    const e11 = try entityManager.createEntity();
-    const transform11 = ecs.ComponentType{
-        .Transform = .{
-            .transform = rend.Transform{
-                .pos = rend.Point.init(-0.3, 0.4),
-                .rot = std.math.pi / 2.0, // 90 degrees
-                .scale = 3.0, // Very large
-            },
-        },
-    };
-    var polygon_points11 = [_]rend.Point{
-        rend.Point.init(0.0, 0.04), // Top
-        rend.Point.init(0.035, 0.02), // Top-right
-        rend.Point.init(0.035, -0.02), // Bottom-right
-        rend.Point.init(0.0, -0.04), // Bottom
-        rend.Point.init(-0.035, -0.02), // Bottom-left
-        rend.Point.init(-0.035, 0.02), // Top-left
-    };
-    const polygon11 = rend.Polygon{
-        .vertices = &polygon_points11,
-        .center = rend.Point.init(0.0, 0.0),
-        .fillColor = rend.Color.init(0.4, 0.8, 0.6, 1.0),
-        .outlineColor = rend.Color.init(0.2, 0.6, 0.4, 1.0),
-    };
-    const render11 = ecs.ComponentType{ .Render = .{ .shapeData = rend.ShapeData{ .Polygon = polygon11 }, .visible = true } };
-    _ = try entityManager.addComponent(e11, transform11);
-    _ = try entityManager.addComponent(e11, render11);
-
-    // ===== EDGE CASE TESTS =====
-    // Entity 12: Zero-scale entity (should be invisible)
-    const e12 = try entityManager.createEntity();
-    const transform12 = ecs.ComponentType{
-        .Transform = .{
-            .transform = rend.Transform{
-                .pos = rend.Point.init(0.0, 0.3),
-                .scale = 0.0, // Zero scale
-            },
-        },
-    };
-    const circle12 = rend.Circle{
-        .origin = rend.Point.init(0.0, 0.0),
-        .radius = 0.1,
-        .fillColor = rend.Color.init(1.0, 0.0, 1.0, 1.0),
-        .outlineColor = rend.Color.init(0.8, 0.0, 0.8, 1.0),
-    };
-    const render12 = ecs.ComponentType{ .Render = .{ .shapeData = rend.ShapeData{ .Circle = circle12 }, .visible = true } };
-    _ = try entityManager.addComponent(e12, transform12);
-    _ = try entityManager.addComponent(e12, render12);
-
-    // Entity 13: 360° rotation (should look normal)
-    const e13 = try entityManager.createEntity();
-    const transform13 = ecs.ComponentType{
-        .Transform = .{
-            .transform = rend.Transform{
-                .pos = rend.Point.init(0.4, 0.3),
-                .rot = 2.0 * std.math.pi, // 360 degrees
-            },
-        },
-    };
-    var triangle_points13 = [_]rend.Point{
-        rend.Point.init(0.0, 0.08),
-        rend.Point.init(-0.07, -0.06),
-        rend.Point.init(0.07, -0.06),
-    };
-    const triangle13 = rend.Triangle{
-        .vertices = &triangle_points13,
-        .fillColor = rend.Color.init(0.7, 0.7, 0.3, 1.0),
-        .outlineColor = rend.Color.init(0.5, 0.5, 0.1, 1.0),
-    };
-    const render13 = ecs.ComponentType{ .Render = .{ .shapeData = rend.ShapeData{ .Triangle = triangle13 }, .visible = true } };
-    _ = try entityManager.addComponent(e13, transform13);
-    _ = try entityManager.addComponent(e13, render13);
-
-    // Entity 14: Invisible entity (has components but not visible)
-    const e14 = try entityManager.createEntity();
-    const transform14 = ecs.ComponentType{ .Transform = .{ .transform = rend.Transform{ .pos = rend.Point.init(-0.2, -0.6) } } };
-    const rect14 = rend.Rectangle{
-        .center = rend.Point.init(0.0, 0.0),
-        .halfWidth = 0.1,
-        .halfHeight = 0.1,
-        .fillColor = rend.Color.init(1.0, 1.0, 1.0, 1.0),
-        .outlineColor = rend.Color.init(0.0, 0.0, 0.0, 1.0),
-    };
-    const render14 = ecs.ComponentType{ .Render = .{ .shapeData = rend.ShapeData{ .Rectangle = rect14 }, .visible = false } };
-    _ = try entityManager.addComponent(e14, transform14);
-    _ = try entityManager.addComponent(e14, render14);
-
-    // Entity 15: Only Transform (no render - should be ignored)
-    const e15 = try entityManager.createEntity();
-    const transform15 = ecs.ComponentType{ .Transform = .{ .transform = rend.Transform{ .pos = rend.Point.init(0.8, -0.8) } } };
-    _ = try entityManager.addComponent(e15, transform15);
-
-    // Entity 16: Only Render (no transform - should be ignored)
-    const e16 = try entityManager.createEntity();
-    const circle16 = rend.Circle{
-        .origin = rend.Point.init(0.0, 0.0),
-        .radius = 0.1,
-        .fillColor = rend.Color.init(0.5, 0.5, 0.5, 1.0),
-        .outlineColor = null,
-    };
-    const render16 = ecs.ComponentType{ .Render = .{ .shapeData = rend.ShapeData{ .Circle = circle16 }, .visible = true } };
-    _ = try entityManager.addComponent(e16, render16);
-
-    std.debug.print("[MAIN] Created 16 comprehensive test entities:\n", .{});
-    std.debug.print("[MAIN] - 3 position-only entities\n", .{});
-    std.debug.print("[MAIN] - 2 scale-only entities\n", .{});
-    std.debug.print("[MAIN] - 2 rotation-only entities\n", .{});
-    std.debug.print("[MAIN] - 2 scale+rotation entities\n", .{});
-    std.debug.print("[MAIN] - 2 polygon tests\n", .{});
-    std.debug.print("[MAIN] - 3 edge case tests\n", .{});
-    std.debug.print("[MAIN] - 2 component mismatch tests\n", .{});
-    std.debug.print("[MAIN] Expected visible entities: 12\n", .{});
+    _ = try entityManager.addComponent(ship2.entity, .{ .Velocity = .{ .velocity = V2.zero() } });
+    _ = try entityManager.addComponent(ship3.entity, .{ .Velocity = .{ .velocity = V2.zero() } });
+    _ = try entityManager.addComponent(ship4.entity, .{ .Velocity = .{ .velocity = V2.zero() } });
 
     // MARK: Main loop
+
     var running = true;
-    var currentTime: i64 = std.time.microTimestamp();
-    var frameEndTime: i64 = currentTime;
-    var frameDuration: i64 = 0;
-    var sleepTime: i64 = 0;
-    var elapsed: f32 = 0.0;
-    var dt: f32 = 0.0;
+    var lastTime: i64 = std.time.microTimestamp();
+    var dt: f32 = 1.0 / 60.0;
 
     while (running) {
-        currentTime = std.time.microTimestamp();
-        elapsed = @floatFromInt(currentTime - frameEndTime);
-        dt = elapsed / Config.F32_NS_PER_S;
         window.processEvents();
-
-        stateManager.update(dt);
-        entityManager.update(dt);
-
         if (window.shouldClose()) {
             running = false;
             continue;
@@ -406,17 +232,22 @@ pub fn main() !void {
 
         // Check for keyboard input
         while (keyboard.pollEvent()) |keyEvent| {
-            std.debug.print(
-                "[MAIN] - Key event: code={}, pressed={}\n",
-                .{ keyEvent.keyCode, keyEvent.isPressed },
-            );
-
-            stateManager.processKeyEvent(keyEvent);
-
+            // temporary quitting
             if (keyEvent.keyCode == .Esc) {
+                std.debug.print("[MAIN] shutting down\n", .{});
                 running = false;
             }
+
+            // this should return a bool? to do a quit? else move keep going
+            stateManager.processKeyEvent(keyEvent);
+            inputManager.updateState(keyEvent);
         }
+
+        stateManager.update(dt);
+        entityManager.inputSystem(&inputManager, dt);
+        inputManager.endFrame();
+
+        entityManager.physicsSystem(dt);
 
         renderer.beginFrame();
         entityManager.renderSystem(&renderer);
@@ -428,17 +259,19 @@ pub fn main() !void {
             Config.HEIGHT,
         );
 
-        frameEndTime = std.time.microTimestamp();
-        frameDuration = frameEndTime - currentTime;
+        // Bottom of loop - timing calculation
+        const currentTime = std.time.microTimestamp();
+        const frameDurationUs = currentTime - lastTime;
+        dt = @as(f32, @floatFromInt(frameDurationUs)) / 1_000_000.0; // Convert to seconds
+        lastTime = currentTime;
 
-        sleepTime = Config.TARGET_FRAME_TIME_NS - frameDuration;
-        if (sleepTime > 0) {
-            // std.debug.print("sleeptime by: {d}\n", .{sleepTime});
-            std.Thread.sleep(@intCast(sleepTime));
+        // Optional frame rate limiting
+        const sleepTimeUs = Config.TARGET_FRAME_TIME_US - frameDurationUs;
+        if (sleepTimeUs > 0) {
+            // std.debug.print("sleeptime: {d}\n", .{sleepTimeUs});
+            std.Thread.sleep(@intCast(sleepTimeUs));
         } else {
-            std.debug.print("Missed frametime by: {d}", .{sleepTime});
+            std.debug.print("Missed frametime by: {d}\n", .{sleepTimeUs});
         }
     }
-
-    std.debug.print("[MAIN] Application shutting down\n", .{});
 }
