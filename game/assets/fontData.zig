@@ -1,3 +1,5 @@
+const V2 = @import("../math.zig").V2;
+
 // # TrueType File Structure (Top-Down)
 // ## Font Directory Header (File Start)
 // Offset | Size | Field           | Description
@@ -22,7 +24,7 @@ pub const FontDirHeader = packed struct {
 // 4      | u32  | checksum        | CheckSum for this table
 // 8      | u32  | offset          | Offset from beginning of font file
 // 12     | u32  | length          | Length of this table in bytes
-pub const TableDirectory = packed struct {
+pub const TableEntry = packed struct {
     tag: u32,
     checksum: u32,
     offset: u32,
@@ -67,6 +69,42 @@ pub const HeadTable = packed struct {
     indexToLocFormat: i16,
     glyphDataFormat: i16,
     padding: u80,
+};
+
+// ## MAXP Table Structure (Maximum Profile)
+// Offset | Size | Field              | Description
+// -------|------|--------------------|----------------------------------
+// 0      | u32  | version            | 0x00005000 for TrueType fonts
+// 4      | u16  | numGlyphs          | Number of glyphs in the font
+// 6      | u16  | maxPoints          | Maximum points in a non-composite glyph
+// 8      | u16  | maxContours        | Maximum contours in a non-composite glyph
+// 10     | u16  | maxCompositePoints | Maximum points in a composite glyph
+// 12     | u16  | maxCompositeContours| Maximum contours in a composite glyph
+// 14     | u16  | maxZones           | 1 if instructions do not use the twilight zone, 2 if they do
+// 16     | u16  | maxTwilightPoints  | Maximum points used in Z0
+// 18     | u16  | maxStorage         | Number of Storage Area locations
+// 20     | u16  | maxFunctionDefs    | Number of FDEFs
+// 22     | u16  | maxInstructionDefs | Number of IDEFs
+// 24     | u16  | maxStackElements   | Maximum stack depth
+// 26     | u16  | maxSizeOfInstructions | Maximum byte count for glyph instructions
+// 28     | u16  | maxComponentElements  | Maximum number of components in composite glyph
+// 30     | u16  | maxComponentDepth     | Maximum levels of recursion in composites
+pub const MaxPTable = packed struct {
+    version: u32,
+    numGlyphs: u16,
+    maxPoints: u16,
+    maxContours: u16,
+    maxComponsitePoints: u16,
+    maxComponsiteContours: u16,
+    maxZones: u16,
+    maxTwilightPoints: u16,
+    maxStorage: u16,
+    maxFunctionDefs: u16,
+    maxInstructionDefs: u16,
+    maxStackElements: u16,
+    maxSizeOfInstructions: u16,
+    maxComponentElements: u16,
+    maxComponentDepth: u16,
 };
 
 // ## CMAP Table Header
@@ -142,7 +180,7 @@ pub const CmapFormat4Header = packed struct {
 // 30     | i16  | reserved4          | Set to 0
 // 32     | i16  | metricDataFormat   | 0 for current format
 // 34     | u16  | numberOfHMetrics   | Number of hMetric entries
-pub const HHEATable = packed struct {
+pub const HheaTable = packed struct {
     version: u32,
     ascender: i16,
     descender: i16,
@@ -174,7 +212,7 @@ pub const HHEATable = packed struct {
 // -------|------|-----------------|----------------------------------
 // 0      | u16  | advanceWidth    | Advance width in font design units
 // 2      | i16  | lsb             | Left side bearing in font design units
-pub const HMetric = packed struct {
+pub const Hmetric = packed struct {
     advanceWidth: u16,
     lsb: i16,
 };
@@ -206,6 +244,7 @@ pub const GlyfHeader = packed struct {
     yMin: i16,
     xMax: i16,
     yMax: i16,
+    padding: u48,
 };
 
 // ### Simple Glyph Data (follows header)
@@ -242,4 +281,12 @@ pub const GlyphFlag = packed struct {
     xSameOrPos: u1,
     ySameOrPos: u1,
     pad: u2,
+};
+
+pub const FilteredGlyph = struct {
+    points: []V2,
+    contourEnds: []u16,
+
+    contourCount: u16,
+    totalPoints: u16,
 };

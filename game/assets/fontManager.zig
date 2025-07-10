@@ -1,461 +1,470 @@
 const std = @import("std");
 const fData = @import("fontData.zig");
 const FontDirHeader = fData.FontDirHeader;
-const TableDirectory = fData.TableDirectory;
+const TableEntry = fData.TableEntry;
 const HeadTable = fData.HeadTable;
 const CmapHeader = fData.CmapHeader;
 const CmapEncoding = fData.CmapEncoding;
 const CmapFormat4Header = fData.CmapFormat4Header;
-const HHEATable = fData.HHEATable;
-const HMetric = fData.HMetric;
+const HheaTable = fData.HheaTable;
+const Hmetric = fData.Hmetric;
 const GlyfHeader = fData.GlyfHeader;
 const GlyphFlag = fData.GlyphFlag;
+const MaxPTable = fData.MaxPTable;
+const FilteredGlyph = fData.FilteredGlyph;
 
-const rend = @import("renderer");
-const Point = rend.Point;
-const Polygon = rend.Polygon;
+const FontReader = @import("fontReader.zig").FontReader;
 
-const TableLookup = enum(u8) {
-    HEAD = 0,
-    CMAP = 1,
-    HHEA = 2,
-    HMTX = 3,
-    LOCA = 4,
-    GLYF = 5,
-};
+const V2 = @import("../math.zig").V2;
 
-const HEAD = std.mem.bigToNative(u32, @bitCast([4]u8{ 'h', 'e', 'a', 'd' }));
-const CMAP = std.mem.bigToNative(u32, @bitCast([4]u8{ 'c', 'm', 'a', 'p' }));
-const HHEA = std.mem.bigToNative(u32, @bitCast([4]u8{ 'h', 'h', 'e', 'a' }));
-const HMTX = std.mem.bigToNative(u32, @bitCast([4]u8{ 'h', 'm', 't', 'x' }));
-const LOCA = std.mem.bigToNative(u32, @bitCast([4]u8{ 'l', 'o', 'c', 'a' }));
-const GLYF = std.mem.bigToNative(u32, @bitCast([4]u8{ 'g', 'l', 'y', 'f' }));
+fn loadFile(alloc: std.mem.Allocator, path: []const u8) ![]const u8 {
+    var pathBuffer: [std.fs.max_path_bytes]u8 = undefined;
+    var exeBuffer: [std.fs.max_path_bytes]u8 = undefined;
 
-const MAX_POINTS_PER_GLYPH: usize = 50;
+    const cwd = try std.process.getCwd(&exeBuffer);
+    const joinedPath = try std.fmt.bufPrint(&pathBuffer, "{s}/zig-out/bin/resources/{s}", .{ cwd, path });
+
+    const file = try std.fs.openFileAbsolute(joinedPath, .{});
+    defer file.close();
+
+    const fileSize = try file.getEndPos();
+    const rawData = try alloc.alloc(u8, fileSize);
+    const dataRead = try file.readAll(rawData);
+    std.debug.assert(dataRead == fileSize);
+
+    return rawData;
+}
+
+fn parseFontDir(reader: *FontReader) !FontDirHeader {
+    const header = reader.readStruct(FontDirHeader);
+    reader.rewind(getBytesOfPadding(FontDirHeader));
+    return header;
+}
+
+fn parseTableEntry(reader: *FontReader) !TableEntry {
+    const tableEntry = reader.readStruct(TableEntry);
+    reader.rewind(getBytesOfPadding(TableEntry));
+    return tableEntry;
+}
+
+fn parseLocaTable(reader: *FontReader, alloc: *std.mem.Allocator, entry: TableEntry, numGlyphs: u16) ![]u32 {
+    reader.seek(entry.offset);
+
+    const actualChecksum = reader.calculateChecksum(entry.offset, entry.length, false);
+    if (actualChecksum != entry.checksum) return error.LocaTableCorrupted;
+
+    var offsets = try alloc.alloc(u32, numGlyphs + 1);
+    for (0..numGlyphs + 1) |i| {
+        const shortOffset = reader.readU16BigEndian();
+        offsets[i] = @as(u32, shortOffset) * 2; // Convert to actual byte offset
+    }
+
+    return offsets;
+}
+
+fn parseHeadTable(reader: *FontReader, entry: TableEntry) !HeadTable {
+    reader.seek(entry.offset);
+
+    std.debug.assert(entry.offset + entry.length <= reader.remaining());
+
+    const headTable = reader.readStruct(HeadTable);
+
+    const actualChecksum = reader.calculateChecksum(entry.offset, entry.length, true);
+    if (actualChecksum != entry.checksum) return error.HeadTableCorrupted;
+    if (headTable.magicNumber != 0x5f0f3cf5) return error.InvalidTTFMagicNumber;
+
+    reader.rewind(getBytesOfPadding(HeadTable));
+
+    return headTable;
+}
+
+fn parseHheaTable(reader: *FontReader, entry: TableEntry) !HheaTable {
+    reader.seek(entry.offset);
+
+    std.debug.assert(entry.offset + entry.length <= reader.remaining());
+
+    const hheaTable = reader.readStruct(HheaTable);
+
+    const actualChecksum = reader.calculateChecksum(entry.offset, entry.length, false);
+    if (actualChecksum != entry.checksum) return error.HheaTableCorrupted;
+
+    reader.rewind(getBytesOfPadding(HheaTable));
+
+    return hheaTable;
+}
+
+fn parseHmetrics(
+    reader: *FontReader,
+    metrics: *std.ArrayList(Hmetric),
+    entry: TableEntry,
+    numberOfGlyphs: u16,
+    numberOfHMetrics: u16,
+) !void {
+    reader.seek(entry.offset);
+
+    std.debug.assert(entry.offset + entry.length <= reader.remaining());
+
+    const actualChecksum = reader.calculateChecksum(entry.offset, entry.length, false);
+    if (actualChecksum != entry.checksum) return error.HmtxTableCorrupted;
+
+    for (0..numberOfHMetrics) |_| {
+        const hMetric = reader.readStruct(Hmetric);
+        reader.rewind(getBytesOfPadding(Hmetric));
+        metrics.appendAssumeCapacity(hMetric);
+    }
+
+    const remainingGlyphs = numberOfGlyphs - numberOfHMetrics;
+    for (0..remainingGlyphs) |_| {
+        const lsb = reader.readI16BigEndian();
+        metrics.appendAssumeCapacity(Hmetric{
+            .advanceWidth = metrics.items[numberOfHMetrics - 1].advanceWidth,
+            .lsb = lsb,
+        });
+    }
+}
+
+fn parseMaxpTable(reader: *FontReader, entry: TableEntry) !MaxPTable {
+    reader.seek(entry.offset);
+
+    std.debug.assert(entry.offset + entry.length <= reader.remaining());
+
+    const actualChecksum = reader.calculateChecksum(entry.offset, entry.length, false);
+    if (actualChecksum != entry.checksum) return error.MaxPTableCorrupted;
+
+    const maxpTable = reader.readStruct(MaxPTable);
+    reader.rewind(getBytesOfPadding(MaxPTable));
+
+    return maxpTable;
+}
+
+fn parseCmapTable(reader: *FontReader, entry: TableEntry) !CmapFormat4Header {
+    reader.seek(entry.offset);
+
+    std.debug.assert(entry.offset + entry.length <= reader.remaining());
+
+    const actualChecksum = reader.calculateChecksum(entry.offset, entry.length, false);
+    if (actualChecksum != entry.checksum) return error.CmapTableCorrupted;
+
+    const cmapHeader = reader.readStruct(CmapHeader);
+    reader.rewind(getBytesOfPadding(CmapHeader));
+
+    const cmapEncoding = find_encoding: {
+        var fallback: ?CmapEncoding = null;
+        for (0..cmapHeader.numTables) |_| {
+            const encoding = reader.readStruct(CmapEncoding);
+            reader.rewind(getBytesOfPadding(CmapEncoding));
+            if (encoding.platformID == 3 and encoding.encodingID == 1) {
+                break :find_encoding encoding; // Prefer this
+            }
+            if (encoding.platformID == 0 and encoding.encodingID == 3) {
+                fallback = encoding; // But accept this
+            }
+        }
+        break :find_encoding fallback orelse return error.NoValidCmapEncoding;
+    };
+
+    reader.seek(entry.offset + cmapEncoding.offset);
+
+    const cmapFormat4Header = reader.readStruct(CmapFormat4Header);
+    reader.rewind(getBytesOfPadding(CmapFormat4Header));
+
+    return cmapFormat4Header;
+}
+
+fn parseCmapFormatData(
+    reader: *FontReader,
+    map: *std.AutoHashMap(u32, u16),
+    alloc: std.mem.Allocator,
+    header: CmapFormat4Header,
+) !void {
+    const numSegments: u16 = header.segCountx2 / 2;
+
+    var endCounts = try alloc.alloc(u16, numSegments);
+    var startCounts = try alloc.alloc(u16, numSegments);
+    var idDeltas = try alloc.alloc(u16, numSegments);
+    var idRangeOffsets = try alloc.alloc(u16, numSegments);
+    for (0..numSegments) |segment| {
+        endCounts[segment] = reader.readU16BigEndian();
+    }
+    const pad = reader.readU16BigEndian();
+    std.debug.assert(pad == 0);
+    for (0..numSegments) |segment| {
+        startCounts[segment] = reader.readU16BigEndian();
+    }
+    for (0..numSegments) |segment| {
+        idDeltas[segment] = reader.readU16BigEndian();
+    }
+    for (0..numSegments) |segment| {
+        idRangeOffsets[segment] = reader.readU16BigEndian();
+    }
+
+    const glyphArraySize = header.length - (14 + 39 * 2 * 4 + 2); // header, data, pad
+    const glyphs = glyphArraySize / 2;
+    var glyphIdArray = try alloc.alloc(u16, glyphs);
+    for (0..glyphs) |glyphId| {
+        glyphIdArray[glyphId] = reader.readU16BigEndian();
+    }
+
+    for (0..0x10000) |char| {
+        var segment: usize = 0;
+        while (segment < numSegments) : (segment += 1) {
+            const start = startCounts[segment];
+            const end = endCounts[segment];
+            if (start <= char and char <= end) break;
+        }
+
+        if (segment >= numSegments) continue;
+
+        var glyphIndex: u16 = 0;
+        if (idRangeOffsets[segment] == 0) {
+            glyphIndex = @as(u16, @intCast(char)) +% idDeltas[segment];
+        } else {
+            const arrayIndex = (idRangeOffsets[segment] / 2) + (char - startCounts[segment]);
+            if (arrayIndex >= glyphIdArray.len) continue;
+
+            const glyphId: u16 = glyphIdArray[arrayIndex];
+
+            if (glyphId != 0) {
+                glyphIndex = glyphId +% idDeltas[segment];
+            }
+        }
+        // std.debug.print("CODE: 0x{x}   GLYPH: {d}\n", .{ char, glyphIndex });
+        try map.put(@as(u32, @intCast(char)), glyphIndex);
+    }
+}
+
+fn parseGlyph(
+    reader: *FontReader,
+    alloc: *std.mem.Allocator,
+    header: GlyfHeader,
+    unitsPerEm: u16,
+) !FilteredGlyph { // BUG: don't make optional (just for getting started)
+    const numberOfContours: u16 = if (header.numberOfContours < 0) 0 else @intCast(header.numberOfContours);
+    // printData(GlyfHeader, header, "Header");
+    if (header.numberOfContours > 0) {
+        var contourEndPts = try alloc.alloc(u16, numberOfContours);
+        for (0..numberOfContours) |i| {
+            contourEndPts[i] = reader.readU16BigEndian();
+        }
+        // std.debug.print("Original Contour Endpoints: {any}\n", .{contourEndPts});
+
+        const totalPoints = contourEndPts[numberOfContours - 1] + 1;
+        // std.debug.print("Total points: {}\n", .{totalPoints});
+
+        const instLen = reader.readU16BigEndian();
+        reader.skip(instLen);
+
+        var flags = try alloc.alloc(GlyphFlag, totalPoints);
+        var flagIndex: usize = 0;
+
+        while (flagIndex < totalPoints) {
+            const rawFlag = reader.readU8();
+            const flag: GlyphFlag = @bitCast(rawFlag);
+            flags[flagIndex] = flag;
+            flagIndex += 1;
+
+            if (flag.repeat != 0) {
+                const repeatCount = reader.readU8();
+                for (0..repeatCount) |_| {
+                    if (flagIndex >= totalPoints) break;
+                    flags[flagIndex] = flag;
+                    flagIndex += 1;
+                }
+            }
+        }
+
+        var xCoords = try alloc.alloc(i32, totalPoints);
+        var yCoords = try alloc.alloc(i32, totalPoints);
+
+        // Parse X coordinates
+        for (0..totalPoints) |i| {
+            if (flags[i].xShort == 1) {
+                const delta = reader.readU8();
+                xCoords[i] = if (flags[i].xSameOrPos == 1) @as(i32, delta) else -@as(i32, delta);
+            } else if (flags[i].xSameOrPos == 1) {
+                xCoords[i] = 0; // Same as previous
+            } else {
+                xCoords[i] = reader.readI16BigEndian();
+            }
+        }
+
+        // Parse Y coordinates
+        for (0..totalPoints) |i| {
+            if (flags[i].yShort == 1) {
+                const delta = reader.readU8();
+                yCoords[i] = if (flags[i].ySameOrPos == 1) @as(i32, delta) else -@as(i32, delta);
+            } else if (flags[i].ySameOrPos == 1) {
+                yCoords[i] = 0; // Same as previous
+            } else {
+                yCoords[i] = reader.readI16BigEndian();
+            }
+        }
+
+        var absX: i32 = 0;
+        var absY: i32 = 0;
+        var filteredContourEndPts = try alloc.alloc(u16, contourEndPts.len);
+        var filteredPoints = try std.ArrayList(V2).initCapacity(alloc.*, totalPoints);
+        var filteredPointCount: u16 = 0;
+        var filteredIndex: usize = 0;
+        for (0..totalPoints) |i| {
+            absX += xCoords[i];
+            absY += yCoords[i];
+
+            if (flags[i].onCurve == 1) {
+                const flippedY = header.yMax - absY;
+
+                const fx: f32 = @as(f32, @floatFromInt(absX));
+                const fy: f32 = @as(f32, @floatFromInt(flippedY));
+                const fEm: f32 = @as(f32, @floatFromInt(unitsPerEm));
+
+                const gameX = (fx / fEm) * 2.0 - 1.0;
+                const gameY = (fy / fEm) * 2.0 - 1.0;
+
+                filteredPoints.appendAssumeCapacity(V2{ .x = gameX, .y = gameY });
+                filteredPointCount += 1;
+                // std.debug.print("Original[{d}]: (x: {d}, y: {d})\n", .{ filteredIndex, absX, absY });
+                // std.debug.print("ScaledPoint[{d}]: (x: {d}, y: {d})\n", .{ filteredIndex, gameX, gameY });
+                filteredIndex += 1;
+            }
+
+            for (contourEndPts, 0..) |endPt, contourIndex| {
+                if (i == endPt) {
+                    filteredContourEndPts[contourIndex] = filteredPointCount - 1;
+                }
+            }
+        }
+        // std.debug.print("New Contour Endpoints: {any}\n", .{filteredContourEndPts});
+
+        return FilteredGlyph{
+            .points = try filteredPoints.toOwnedSlice(),
+            .contourEnds = try alloc.dupe(u16, filteredContourEndPts),
+            .contourCount = numberOfContours,
+            .totalPoints = filteredPointCount,
+        };
+    }
+    return error.GlyphParsing;
+}
 
 pub const Font = struct {
     alloc: std.mem.Allocator,
-    unitsPerEm: u16, // from head
+    unitsPerEm: u16 = undefined, // from head
 
     // from hhea table
-    ascender: i16,
-    descender: i16,
-    lineGap: i16,
+    ascender: i16 = undefined,
+    descender: i16 = undefined,
+    lineGap: i16 = undefined,
 
-    asciiToGlyph: [96]u16, // from cmap ASCII 32-126
-    glyphAdvanceWidths: [96]HMetric, // how far to advance per char
-    glyphShapes: [96][MAX_POINTS_PER_GLYPH]?Polygon, // actual renderable shape (could be null);
+    charToGlyph: std.AutoHashMap(u32, u16) = undefined, // from cmap ASCII 32-126
+    glyphAdvanceWidths: std.ArrayList(Hmetric) = undefined, // how far to advance per char
+    glyphShapes: std.ArrayList(FilteredGlyph) = undefined, // actual renderable points in gameSpace;
 
     pub fn init(alloc: *std.mem.Allocator, path: []const u8) !Font {
-        // find the file and read it in
-        var pathBuffer: [std.fs.max_path_bytes]u8 = undefined;
-        var exeBuffer: [std.fs.max_path_bytes]u8 = undefined;
-        const cwd = try std.process.getCwd(&exeBuffer);
-        const joinedPath = try std.fmt.bufPrint(&pathBuffer, "{s}/zig-out/bin/resources/{s}", .{ cwd, path });
-        const file = try std.fs.openFileAbsolute(joinedPath, .{});
-        defer file.close();
-        const fileSize = try file.getEndPos();
-        const rawData = try alloc.alloc(u8, fileSize);
-        defer alloc.free(rawData);
-        const dataRead = try file.readAll(rawData);
-        std.debug.assert(dataRead == fileSize);
+        var arena = std.heap.ArenaAllocator.init(alloc.*);
+        defer arena.deinit();
+        var tempAlloc = arena.allocator();
+        var tableDirectory = std.AutoArrayHashMap(u32, TableEntry).init(tempAlloc);
 
-        // TODO: get to this point - shrink this manual crap down to 20 lines
-        // fn parseTable(comptime T: type, comptime validator: fn(T) bool) ParseResult(T)
+        const rawData = try loadFile(tempAlloc, path);
 
-        var font = Font{
+        var reader = FontReader{ .data = rawData };
+
+        const fontDirHeader = try parseFontDir(&reader);
+        const numberOfTables = fontDirHeader.numTables;
+        for (0..numberOfTables) |_| {
+            const tableEntry = try parseTableEntry(&reader);
+            try tableDirectory.put(tableEntry.tag, tableEntry);
+        }
+
+        const headEntry = getTable(&tableDirectory, "head") orelse return error.HeadTableNotFound;
+        const headTable = try parseHeadTable(&reader, headEntry);
+        const indexToLoc = headTable.indexToLocFormat;
+        const unitsPerEm = headTable.unitsPerEm;
+        _ = indexToLoc;
+
+        const maxpEntry = getTable(&tableDirectory, "maxp") orelse return error.MaxpTableNotFound;
+        const maxpTable = try parseMaxpTable(&reader, maxpEntry);
+        const numberOfGlyphs = maxpTable.numGlyphs;
+
+        const hheaEntry = getTable(&tableDirectory, "hhea") orelse return error.HheaTableNotFound;
+        const hheaTable = try parseHheaTable(&reader, hheaEntry);
+        const numberOfHMetrics = hheaTable.numberOfHMetrics;
+
+        const hmtxEntry = getTable(&tableDirectory, "hmtx") orelse return error.HmtxTableNotFound;
+        var hMetrics = try std.ArrayList(Hmetric).initCapacity(alloc.*, numberOfGlyphs);
+        errdefer hMetrics.deinit();
+        try parseHmetrics(&reader, &hMetrics, hmtxEntry, numberOfGlyphs, numberOfHMetrics);
+
+        const cmapEntry = getTable(&tableDirectory, "cmap") orelse return error.CmapTableNotFound;
+        const cmapFormat4Header = try parseCmapTable(&reader, cmapEntry);
+        var mapIndices = std.AutoHashMap(u32, u16).init(alloc.*);
+        errdefer mapIndices.deinit();
+        try parseCmapFormatData(&reader, &mapIndices, tempAlloc, cmapFormat4Header);
+
+        const glyfEntry = getTable(&tableDirectory, "glyf") orelse return error.GlyfTableNotFound;
+
+        const locaEntry = getTable(&tableDirectory, "loca") orelse return error.LocaTableNotFound;
+        const offsets = try parseLocaTable(&reader, &tempAlloc, locaEntry, numberOfGlyphs);
+
+        var glyphs = try std.ArrayList(FilteredGlyph).initCapacity(alloc.*, numberOfGlyphs);
+        for (0..numberOfGlyphs) |glyphIndex| {
+            if (glyphIndex == 21 or glyphIndex == 65 or glyphIndex == 100) {
+                std.debug.print("GlyphIndex: {d}\n", .{glyphIndex});
+                const start = offsets[glyphIndex];
+                const end = offsets[glyphIndex + 1];
+                if (start == end) continue; // Skip empty glyphs
+
+                reader.seek(glyfEntry.offset + start);
+                const header = reader.readStruct(GlyfHeader);
+                reader.rewind(getBytesOfPadding(GlyfHeader));
+
+                const glyphData = try parseGlyph(&reader, &tempAlloc, header, unitsPerEm);
+                // printData(FilteredGlyph, glyphData, "Filtered Glyp");
+                // std.debug.print("---------------------\n", .{});
+                // _ = glyphData;
+                // TODO: Store glyphData in font.glyphShapes[glyphIndex]
+                // printData(Hmetric, hMetrics.items[glyphIndex], "HMetric");
+                glyphs.appendAssumeCapacity(glyphData);
+            }
+        }
+
+        return Font{
             .alloc = alloc.*,
-            .unitsPerEm = undefined,
-            .ascender = undefined,
-            .descender = undefined,
-            .lineGap = undefined,
-            .asciiToGlyph = undefined,
-            .glyphAdvanceWidths = undefined,
-            .glyphShapes = undefined,
+            .unitsPerEm = unitsPerEm,
+            .ascender = hheaTable.ascender,
+            .descender = hheaTable.descender,
+            .lineGap = hheaTable.lineGap,
+            .charToGlyph = mapIndices,
+            .glyphAdvanceWidths = hMetrics,
+            .glyphShapes = glyphs,
         };
-
-        // parse the header
-        const fontDirHeader = fromBigEndian(FontDirHeader, rawData[0..@sizeOf(FontDirHeader)]);
-        // printData(FontDirHeader, fontDirHeader, "FONTDIRHEADER");
-
-        // const MAX_NUMBER_OF_TABLES = 32; // safe number for complex fonts
-        const MAX_NUMBER_OF_TABLES = 6; // used for this simple font parser
-        var tableDirectory: [MAX_NUMBER_OF_TABLES]TableDirectory = undefined;
-
-        var offset: usize = 12; // Right after font directory header
-        for (0..fontDirHeader.numTables) |_| {
-            const rawEntry: TableDirectory = @bitCast(rawData[offset .. offset + 16][0..16].*);
-            const rawTable = swapEndianness(TableDirectory, rawEntry);
-            offset += 16;
-            switch (rawTable.tag) {
-                HEAD => tableDirectory[@intFromEnum(TableLookup.HEAD)] = rawTable,
-                CMAP => tableDirectory[@intFromEnum(TableLookup.CMAP)] = rawTable,
-                HHEA => tableDirectory[@intFromEnum(TableLookup.HHEA)] = rawTable,
-                HMTX => tableDirectory[@intFromEnum(TableLookup.HMTX)] = rawTable,
-                LOCA => tableDirectory[@intFromEnum(TableLookup.LOCA)] = rawTable,
-                GLYF => tableDirectory[@intFromEnum(TableLookup.GLYF)] = rawTable,
-                else => {}, // Ignoring other tables not needed for this mini-implementation
-                // TODO: autogenerate the tables/storage based on what is found
-            }
-        }
-
-        const headOffset: usize = tableDirectory[@intFromEnum(TableLookup.HEAD)].offset;
-        const headSize: usize = @sizeOf(HeadTable);
-        const headEnd: usize = tableDirectory[@intFromEnum(TableLookup.HEAD)].offset + headSize;
-        const rawHead: HeadTable = @bitCast(rawData[headOffset..headEnd][0..headSize].*);
-        const headTable = swapEndianness(HeadTable, rawHead);
-        font.unitsPerEm = headTable.unitsPerEm;
-        // printData(HeadTable, headTable, "HEADTABLE");
-
-        const cmapOffset: usize = tableDirectory[@intFromEnum(TableLookup.CMAP)].offset;
-        const cmapSize: usize = @sizeOf(CmapHeader);
-        const cmapEnd: usize = tableDirectory[@intFromEnum(TableLookup.CMAP)].offset + cmapSize;
-        const rawCmap: CmapHeader = @bitCast(rawData[cmapOffset..cmapEnd][0..cmapSize].*);
-        const cmapHeader = swapEndianness(CmapHeader, rawCmap);
-        // printData(CmapHeader, cmapHeader, "CMAPHEADER");
-
-        const hheaOffset: usize = tableDirectory[@intFromEnum(TableLookup.HHEA)].offset;
-        const hheaSize: usize = @sizeOf(HHEATable);
-        const hheaEnd: usize = tableDirectory[@intFromEnum(TableLookup.HHEA)].offset + hheaSize;
-        const rawHhea: HHEATable = @bitCast(rawData[hheaOffset..hheaEnd][0..hheaSize].*);
-        const hheaTable = swapEndianness(HHEATable, rawHhea);
-        font.ascender = hheaTable.ascender;
-        font.descender = hheaTable.descender;
-        // printData(HHEATable, hheaTable, "HHEATABLE");
-
-        const cmapEncoding = blk: for (0..cmapHeader.numTables) |i| {
-            const cmapEncodeOffset: usize = cmapOffset + 4 + (8 * i);
-            const cmapEncodeSize: usize = @sizeOf(CmapEncoding);
-            const cmapEncodeEnd: usize = cmapEncodeOffset + cmapEncodeSize;
-            const rawCmapEncode: CmapEncoding = @bitCast(rawData[cmapEncodeOffset..cmapEncodeEnd][0..cmapEncodeSize].*);
-            const cmapEncode = swapEndianness(CmapEncoding, rawCmapEncode);
-
-            // Unicode Basic Multilingual Plane
-            if ((cmapEncode.platformID == 0 and cmapEncode.encodingID == 3)) {
-                // std.debug.print("Selected CMAPEN CODING: PlatformID: {d}   EncodingID: {d}\n", .{ cmapEncode.platformID, cmapEncode.encodingID });
-                break :blk cmapEncode;
-            }
-        } else {
-            return error.NoUnicodeEncoding;
-        };
-
-        const subTableOffset = cmapOffset + cmapEncoding.offset;
-        const rawFormat: u16 = @bitCast(rawData[subTableOffset .. subTableOffset + 2][0..2].*);
-        const cmapFormat = std.mem.bigToNative(u16, rawFormat);
-        // std.debug.print("CMAP Format = {d}\n", .{cmapFormat});
-        switch (cmapFormat) {
-            0, 6, 10, 12 => {},
-            4 => {
-                const format4Offset: usize = cmapOffset + cmapEncoding.offset;
-                const format4Size: usize = @sizeOf(CmapFormat4Header);
-                const format4End: usize = format4Offset + format4Size;
-                const rawfmt4Header: CmapFormat4Header = @bitCast(rawData[format4Offset..format4End][0..format4Size].*);
-                const fmt4Header = swapEndianness(CmapFormat4Header, rawfmt4Header);
-                // std.debug.print("Format4 Data  format: {d} length: {d}\n", .{ fmt4Header.format, fmt4Header.length });
-
-                const segmentCount = fmt4Header.segCountx2 / 2;
-                const arraySize: usize = segmentCount * 2;
-                var endCountOffset = format4Offset + 14;
-                var startCountOffset = endCountOffset + arraySize + 2;
-                var idDeltaOffset = startCountOffset + arraySize;
-                var idRangeOffset = idDeltaOffset + arraySize;
-                const glyphIDArray = idRangeOffset + arraySize;
-                for (0..segmentCount) |segment| {
-                    endCountOffset += 2;
-                    startCountOffset += 2;
-                    idDeltaOffset += 2;
-                    idRangeOffset += 2;
-
-                    const endCount: u16 = std.mem.bigToNative(u16, @bitCast(rawData[endCountOffset .. endCountOffset + 2][0..2].*));
-                    const startCount: u16 = std.mem.bigToNative(u16, @bitCast(rawData[startCountOffset .. startCountOffset + 2][0..2].*));
-                    const idDelta: u16 = std.mem.bigToNative(u16, @bitCast(rawData[idDeltaOffset .. idDeltaOffset + 2][0..2].*));
-                    const idRange: u16 = std.mem.bigToNative(u16, @bitCast(rawData[idRangeOffset .. idRangeOffset + 2][0..2].*));
-                    if (startCount >= 32 and endCount <= 127) {
-                        // std.debug.print(
-                        //     "endCount: {d}  startCount: {d}  idDeltaOffset: {d} idRangeOffset: {d}\n",
-                        //     .{ endCount, startCount, idDelta, idRange },
-                        // );
-                        var c = startCount;
-                        while (c <= endCount) : (c += 1) {
-                            const char: u16 = @intCast(c);
-                            if (idRange == 0) {
-                                font.asciiToGlyph[c - 32] = @truncate(char + idDelta);
-                            } else {
-                                const glyphArrayIndex = (idRange / 2) + (char - startCount) + segment;
-                                const glyphOffset = glyphIDArray + (glyphArrayIndex * 2);
-                                const glyphIndex: u16 = std.mem.bigToNative(u16, @bitCast(rawData[glyphOffset .. glyphOffset + 2][0..2].*));
-                                font.asciiToGlyph[c - 32] = glyphIndex;
-                                // std.debug.print(
-                                //     "segment: {d} char: {d}  idRangeVal: {d}   startCountVal: {d}  glyphArrayIndex: {d}   glyphIndex: {d}\n",
-                                //     .{ segment, c, idRange, startCount, glyphArrayIndex, glyphIndex },
-                                // );
-                            }
-                        }
-                    }
-                }
-            },
-            else => unreachable,
-        }
-
-        // std.debug.print("numMetrics: {d}\n", .{hheaTable.numberOfHMetrics});
-        const hmtxOffset: usize = tableDirectory[@intFromEnum(TableLookup.HMTX)].offset;
-        const numMetrics = hheaTable.numberOfHMetrics;
-        for (0..font.asciiToGlyph.len) |i| {
-            const glyphIndex = font.asciiToGlyph[i];
-
-            if (glyphIndex == 0) {
-                font.glyphAdvanceWidths[i] = HMetric{ .advanceWidth = 0, .lsb = 0 };
-            } else if (glyphIndex < numMetrics) {
-                const metricByteOffset = hmtxOffset + (glyphIndex * 4);
-                const rawMetric: HMetric = @bitCast(rawData[metricByteOffset .. metricByteOffset + 4][0..4].*);
-                const metric: HMetric = swapEndianness(HMetric, rawMetric);
-                font.glyphAdvanceWidths[i] = metric;
-                // std.debug.print("metric: {any}\n", .{metric});
-            } else {
-                const lastMetricOffset = hmtxOffset + ((numMetrics - 1) * 4);
-                const rawMetric: HMetric = @bitCast(rawData[lastMetricOffset .. lastMetricOffset + 4][0..4].*);
-                const metric: HMetric = swapEndianness(HMetric, rawMetric);
-                font.glyphAdvanceWidths[i] = metric;
-                // std.debug.print("metric: {any}\n", .{metric});
-            }
-        }
-
-        // std.debug.print("headTable.indexToLocFormat: {d}\n", .{headTable.indexToLocFormat});
-        const locaOffset = tableDirectory[@intFromEnum(TableLookup.LOCA)].offset;
-        // std.debug.print("LOCAOffset: {d}\n", .{locaOffset});
-
-        // std.debug.print("GLYF table offset: {d}\n", .{tableDirectory[@intFromEnum(TableLookup.GLYF)].offset});
-        for (0..font.asciiToGlyph.len) |i| {
-            const index = font.asciiToGlyph[i];
-            if (index == 0) continue;
-
-            const offsetSize: usize = if (headTable.indexToLocFormat == 0) 2 else 4;
-            const startByteOffset = locaOffset + (index * offsetSize);
-            const endByteOffset = locaOffset + ((index + 1) * offsetSize);
-
-            const start: u32 = if (headTable.indexToLocFormat == 0)
-                std.mem.bigToNative(u16, @bitCast(rawData[startByteOffset .. startByteOffset + 2][0..2].*))
-            else
-                std.mem.bigToNative(u32, @bitCast(rawData[startByteOffset .. startByteOffset + 4][0..4].*));
-
-            const end: u32 = if (headTable.indexToLocFormat == 0)
-                std.mem.bigToNative(u16, @bitCast(rawData[endByteOffset .. endByteOffset + 2][0..2].*))
-            else
-                std.mem.bigToNative(u32, @bitCast(rawData[endByteOffset .. endByteOffset + 4][0..4].*));
-
-            const glyphOffset = tableDirectory[@intFromEnum(TableLookup.GLYF)].offset +
-                if (headTable.indexToLocFormat == 0) (start * 2) else start; // const startByteOffset = locaOffset + (index * 2);
-
-            const glyphLen = end - start;
-            // std.debug.print("Letter index {d}, glyph index {d}, start offset {d}, end offset {d}\n", .{ i, index, start, end });
-            _ = glyphLen;
-
-            // const glyphOffset = tableDirectory[@intFromEnum(TableLookup.GLYF)].offset + (start * 2);
-            // std.debug.print("glyphOffset: {d}\n", .{glyphOffset});
-            const rawHeader: GlyfHeader = @bitCast(rawData[glyphOffset .. glyphOffset + 10][0..10].*);
-            const glyfHeader = swapEndianness(GlyfHeader, rawHeader);
-            // std.debug.print("Glyph header: numberOfContours={d}, xMin={d}, yMin={d}, xMax={d}, yMax={d}\n", .{
-            //     glyfHeader.numberOfContours,
-            //     glyfHeader.xMin,
-            //     glyfHeader.yMin,
-            //     glyfHeader.xMax,
-            //     glyfHeader.yMax,
-            // });
-
-            // std.debug.print("Reading glyph header at absolute address: {d}\n", .{glyphOffset});
-            // std.debug.print("GLYF base: {d}, calculated offset: {d}\n", .{ tableDirectory[@intFromEnum(TableLookup.GLYF)].offset, glyphOffset - tableDirectory[@intFromEnum(TableLookup.GLYF)].offset });
-            // std.debug.print("Raw glyph header bytes: ", .{});
-            // for (0..10) |x| {
-            //     std.debug.print("{d} ", .{rawData[glyphOffset + x]});
-            // }
-            // std.debug.print("\n", .{});
-            // Only check a few characters for comparison
-            // if (i != 14 and i != 44 and i != 16 and i != 41) continue; // period, L, and digit '0'
-
-            // std.debug.print("\n=== CHARACTER {c} (ASCII {d}, array index {d}) ===\n", .{ @as(u8, @intCast(i + 32)), i + 32, i });
-            // std.debug.print("Glyph index: {d}\n", .{index});
-            // std.debug.print("LOCA start: {d}, end: {d}\n", .{ start, end });
-            // std.debug.print("Calculated glyphOffset: {d}\n", .{glyphOffset});
-
-            // Read and print first 10 bytes of glyph data
-            // std.debug.print("Raw glyph header bytes: ", .{});
-            // for (0..10) |b| {
-            //     std.debug.print("{d} ", .{rawData[glyphOffset + b]});
-            // }
-            // std.debug.print("\n", .{});
-            var endPointOffset = glyphOffset + 10;
-            const numberOfContours: usize = @intCast(if (glyfHeader.numberOfContours > 0) glyfHeader.numberOfContours else 0);
-            var arena = std.heap.ArenaAllocator.init(alloc.*);
-            defer arena.deinit();
-            const endPts = try arena.allocator().alloc(u16, numberOfContours);
-            for (0..numberOfContours) |c| {
-                endPts[c] = std.mem.bigToNative(u16, @bitCast(rawData[endPointOffset .. endPointOffset + 2][0..2].*));
-                endPointOffset += 2;
-            }
-            const totalPoints = if (numberOfContours > 0) endPts[numberOfContours - 1] + 1 else 0;
-            if (totalPoints == 0) continue;
-
-            // std.debug.print("Contour endpoints: ", .{});
-            // for (0..numberOfContours) |c| {
-            //     std.debug.print("[{d}]={d} ", .{ c, endPts[c] });
-            // }
-            // std.debug.print("\n", .{});
-            // std.debug.print("Glyph data length: {d} bytes\n", .{glyphLen});
-            // std.debug.print("Expected contours from header: {d}\n", .{glyfHeader.numberOfContours});
-            // std.debug.print("Total points calculated: {d}\n", .{totalPoints});
-
-            const instOffset = endPointOffset;
-            // std.debug.print("instOffset: {d}\n", .{instOffset});
-            const instructionLen = std.mem.bigToNative(u16, @bitCast(rawData[instOffset .. instOffset + 2][0..2].*));
-
-            const flagsData = instOffset + 2 + instructionLen;
-            // std.debug.print("flagsData: {d}\n", .{flagsData});
-            const flags = try arena.allocator().alloc(GlyphFlag, totalPoints);
-            var flagIndex: usize = 0;
-            var rawBytePos: usize = flagsData;
-            while (flagIndex < totalPoints) {
-                const rawFlag = rawData[rawBytePos];
-                const flag: GlyphFlag = @bitCast(rawFlag);
-                flags[flagIndex] = flag;
-                flagIndex += 1;
-                rawBytePos += 1;
-
-                if (flag.repeat == 1) {
-                    const repeatCount = rawData[rawBytePos];
-                    rawBytePos += 1; // Skip the repeat count byte
-
-                    // Copy flag to next repeatCount positions
-                    for (0..repeatCount) |_| {
-                        flags[flagIndex] = flag;
-                        flagIndex += 1;
-                    }
-                }
-            }
-
-            const coordsMem = try arena.allocator().alloc(i16, totalPoints * 2);
-            // keep using rawBytePos because it is at the right spot
-            var currentX: i16 = 0;
-            var deltaX: i16 = 0;
-            var xIndex: usize = 0;
-            while (xIndex < totalPoints) {
-                const flag = flags[xIndex];
-                if (flag.xSameOrPos == 0 and flag.xShort == 0) {
-                    deltaX = std.mem.bigToNative(i16, @bitCast(rawData[rawBytePos .. rawBytePos + 2][0..2].*));
-                    rawBytePos += 2;
-                    currentX += deltaX;
-                } else if (flag.xShort == 1) {
-                    const rawByte: u8 = rawData[rawBytePos];
-                    const castByte: i16 = @intCast(rawByte);
-                    deltaX = if (flag.xSameOrPos == 1) castByte else -castByte;
-                    rawBytePos += 1;
-                    currentX += deltaX;
-                } else {}
-                // Store coordinate and advance to next point
-                coordsMem[xIndex] = currentX;
-                xIndex += 1;
-            }
-
-            var currentY: i16 = 0;
-            var deltaY: i16 = 0;
-            var yIndex: usize = 0;
-            while (yIndex < totalPoints) {
-                const flag = flags[yIndex];
-                if (flag.ySameOrPos == 0 and flag.yShort == 0) {
-                    deltaY = std.mem.bigToNative(i16, @bitCast(rawData[rawBytePos .. rawBytePos + 2][0..2].*));
-                    rawBytePos += 2;
-                    currentY += deltaY;
-                } else if (flag.yShort == 1) {
-                    const rawByte: u8 = rawData[rawBytePos];
-                    const castByte: i16 = @intCast(rawByte);
-                    deltaY = if (flag.ySameOrPos == 1) castByte else -castByte;
-                    rawBytePos += 1;
-                    currentY += deltaY;
-                } else {}
-                // Store coordinate and advance to next point
-                coordsMem[totalPoints + yIndex] = currentY;
-                yIndex += 1;
-            }
-
-            const MAX_CONTOURS_PER_GLYPH: usize = 15;
-            const BoundsType = struct { xMin: i16, xMax: i16, yMin: i16, yMax: i16 };
-            const initBounds = BoundsType{ .xMin = std.math.maxInt(i16), .xMax = -std.math.maxInt(i16), .yMin = std.math.maxInt(i16), .yMax = -std.math.maxInt(i16) };
-            var contourBounds = [_]BoundsType{initBounds} ** MAX_CONTOURS_PER_GLYPH;
-            var currentContour: usize = 0;
-            for (0..totalPoints) |loc| {
-                if (flags[loc].onCurve == 1) {
-                    var bounds = &contourBounds[currentContour];
-                    const x: i16 = coordsMem[loc];
-                    const y: i16 = coordsMem[totalPoints + loc];
-                    bounds.xMin = @min(bounds.xMin, x);
-                    bounds.xMax = @max(bounds.xMax, x);
-                    bounds.yMin = @min(bounds.yMin, y);
-                    bounds.yMax = @max(bounds.yMax, y);
-                }
-
-                if (currentContour < numberOfContours and loc == endPts[currentContour]) {
-                    // std.debug.print("contourBounds: {any}\n", .{contourBounds[currentContour]});
-                    currentContour += 1;
-                }
-            }
-
-            var pointCount: usize = 0;
-            const baseSize = 0.25;
-            const scale = baseSize / @as(f32, @floatFromInt(headTable.unitsPerEm));
-            var p: Point = undefined;
-            const points = try arena.allocator().alloc(Point, MAX_POINTS_PER_GLYPH);
-            currentContour = 0;
-            for (0..totalPoints) |loc| {
-                const whichContour = currentContour;
-                if (flags[loc].onCurve == 1) {
-                    const rawx: f32 = @floatFromInt(coordsMem[loc]);
-                    const rawy: f32 = @floatFromInt(coordsMem[totalPoints + loc]);
-
-                    // const x = rawx / @as(f32, @floatFromInt(headTable.unitsPerEm));
-                    // const y = -rawy / @as(f32, @floatFromInt(headTable.unitsPerEm)); // Just flip Y
-                    const centerX = @as(f32, @floatFromInt(contourBounds[whichContour].xMax + contourBounds[whichContour].xMin)) / 2.0;
-                    const centerY = @as(f32, @floatFromInt(contourBounds[whichContour].yMax + contourBounds[whichContour].yMin)) / 2.0;
-                    const x = (rawx - centerX) * scale;
-                    const y = (rawy - centerY) * scale * -1.0;
-                    p = .{ .x = x, .y = y };
-                    // p = .{ .x = rawx / 1000.0, .y = rawy / 1000.0 };
-                    points[pointCount] = p;
-                    pointCount += 1;
-                    // std.debug.print("CurrentContour [{d}]  rawX: {d}   rawY: {d}\n", .{ currentContour, rawx, rawy });
-                    // std.debug.print("CurrentContour [{d}]  translated: {d}   translated: {d}\n", .{ currentContour, x, y });
-                }
-                if (currentContour < numberOfContours and loc == endPts[currentContour]) {
-                    // font.glyphShapes[i][currentContour] = try Polygon.init(alloc.*, points[0..pointCount]);
-                    // if (currentContour == 0 and loc == endPts[currentContour]) {
-                    //     // font.glyphShapes[i][0] = try Polygon.init(alloc.*, points[0..pointCount]);
-                    //     currentContour += 1;
-                    //     pointCount = 0;
-                    // }
-                    currentContour += 1;
-                    pointCount = 0;
-                }
-            }
-        }
-        // printData(Font, font, "FONT DATA");
-        return font;
     }
 
-    fn printData(comptime T: type, value: T, label: []const u8) void {
-        std.debug.print("{s}\n", .{label});
-        inline for (@typeInfo(T).@"struct".fields) |field| {
-            std.debug.print("{s}: {any}\n", .{ field.name, @field(value, field.name) });
-        }
-    }
-
-    fn swapEndianness(comptime T: type, value: T) T {
-        var result: T = undefined;
-        inline for (@typeInfo(T).@"struct".fields) |field| {
-            @field(result, field.name) = std.mem.bigToNative(field.type, @field(value, field.name));
-        }
-        return result;
-    }
-
-    fn fromBigEndian(comptime T: type, bytes: []const u8) T {
-        const raw: T = @bitCast(bytes[0..@sizeOf(T)].*);
-        return swapEndianness(T, raw);
+    pub fn deinit(self: *Font) void {
+        self.glyphAdvanceWidths.deinit();
+        self.charToGlyph.deinit();
+        self.glyphShapes.deinit();
     }
 };
+// MARK: Helpers
+fn getBytesOfPadding(comptime T: type) usize {
+    return switch (T) {
+        HheaTable => 96 / 8,
+        CmapFormat4Header => 16 / 8,
+        HeadTable => 80 / 8,
+        FontDirHeader => 32 / 8,
+        GlyfHeader => 48 / 8,
+        else => 0,
+    };
+}
+
+fn getTable(tables: *const std.AutoArrayHashMap(u32, TableEntry), name: []const u8) ?TableEntry {
+    const tag = std.mem.readInt(u32, name[0..4], .big);
+    return tables.get(tag);
+}
+
+fn printData(comptime T: type, value: T, label: []const u8) void {
+    std.debug.print("{s}\n", .{label});
+    inline for (@typeInfo(T).@"struct".fields) |field| {
+        std.debug.print("{s}: {any}\n", .{ field.name, @field(value, field.name) });
+    }
+}
