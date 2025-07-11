@@ -62,7 +62,7 @@ pub const PolygonConfig = struct {
     rotation: ?f32 = null,
     scale: ?f32 = null,
 
-    vertices: ?[]rend.Point = null,
+    vertices: ?[]const rend.Point = null,
     outlineColor: ?rend.Color,
     fillColor: ?rend.Color,
 };

@@ -102,6 +102,12 @@ pub const RenderCompStorage = struct {
     }
 
     pub fn deinit(self: *RenderCompStorage) void {
+        for (self.data.items) |renderComp| {
+            switch (renderComp.shapeData) {
+                .Polygon => |p| self.data.allocator.free(p.vertices),
+                else => {},
+            }
+        }
         self.data.deinit();
         self.indexToEntity.deinit();
         self.entityToIndex.deinit();

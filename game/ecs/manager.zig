@@ -87,7 +87,7 @@ pub const EntityManager = struct {
             pComp = try self.addComponent(entity, .{ .Player = player });
         }
 
-        if (tComp and rComp and cComp and pComp)
+        if (tComp or rComp or cComp or pComp)
             return .{ .entity = entity, .manager = self };
 
         try self.destroyEntity(entity);
@@ -361,7 +361,7 @@ pub const EntityManager = struct {
         return true;
     }
 
-    fn addTransform(self: *EntityManager, entity: Entity, comp: TransformComp) !bool {
+    pub fn addTransform(self: *EntityManager, entity: Entity, comp: TransformComp) !bool {
         if (self.transform.entityToIndex.get(entity.id)) |_| return false;
 
         // insert into the storage
@@ -373,7 +373,7 @@ pub const EntityManager = struct {
         return true;
     }
 
-    fn addRender(self: *EntityManager, entity: Entity, comp: RenderComp) !bool {
+    pub fn addRender(self: *EntityManager, entity: Entity, comp: RenderComp) !bool {
         if (self.render.entityToIndex.get(entity.id)) |_| return false;
 
         // insert into the storage
