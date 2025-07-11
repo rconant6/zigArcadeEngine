@@ -16,6 +16,7 @@ const rend = @import("renderer");
 const Renderer = rend.Renderer;
 const Colors = rend.Colors;
 const Point = rend.Point;
+const Polygon = rend.Polygon;
 
 const asset = @import("assets.zig");
 const AssetManager = asset.AssetManager;
@@ -83,80 +84,46 @@ pub fn main() !void {
     };
     defer renderer.deinit();
 
-    // const font = try assetManager.loadFont("Silkscreen", "fonts/Silkscreen.ttf"); // assumes assets are in /resources/
-    // const font = try assetManager.loadFont("Pixelify", "fonts/PixelifySans.ttf"); // assumes assets are in /resources/
-    // const font = try assetManager.loadFont("SpaceMono", "fonts/SpaceMono.ttf"); // assumes assets are in /resources/
-    const font = try assetManager.loadFont("Orbicon", "fonts/Orbitron.ttf"); // assumes assets are in /resources/
-    // const font = try assetManager.loadFont("Arcade", "fonts/arcadeFont.ttf"); // assumes assets are in /resources/
-    // defer font.deinit();
-    _ = font;
-    // font.print();
+    const fontName = "Orbitron";
+    // var font = try assetManager.loadFont("Silkscreen", "fonts/Silkscreen.ttf");
+    // var font = try assetManager.loadFont("Pixelify", "fonts/PixelifySans.ttf");
+    // var font = try assetManager.loadFont("SpaceMono", "fonts/SpaceMono.ttf"); // This one has some issues (format?)
+    // var font = try assetManager.loadFont("Arcade", "fonts/arcadeFont.ttf");
+    var font = try assetManager.loadFont(fontName, "fonts/Orbitron.ttf");
+    std.debug.print("[MAIN] loaded {s} font\n", .{fontName});
+    defer font.deinit();
 
-    // Top-left 'I' (ASCII 73 -> index 41)
-    // if (font.glyphShapes[41][0]) |iGlyph| {
-    //     var iPolygon = iGlyph;
-    //     iPolygon.fillColor = rend.Colors.WHITE;
-    //     const iEntity = try entityManager.addEntity();
-    //     _ = try entityManager.addTransform(iEntity.entity, .{ .transform = .{ .offset = rend.Point.init(0.0, 0.0) } });
-    //     _ = try entityManager.addRender(iEntity.entity, .{ .shapeData = .{ .Polygon = iPolygon }, .visible = true });
-    // }
-
-    // // For 'I' debug - print the actual transformed points
-    // if (font.glyphShapes[41][0]) |lGlyph| {
-    //     std.debug.print("I [{d}] polygon vertices:\n", .{0});
-    //     for (lGlyph.vertices, 0..) |vertex, i| {
-    //         std.debug.print("  [{d}]: ({d:.3}, {d:.3})\n", .{ i, vertex.x, vertex.y });
-    //     }
-    // }
-    // // Bottom-left 'A' (ASCII 65 -> index 33)
-    // if (font.glyphShapes[33][0]) |aGlyph| {
-    //     var aPolygon = aGlyph;
-    //     aPolygon.fillColor = rend.Colors.GREEN;
-    //     const aEntity = try entityManager.addEntity();
-    //     _ = try entityManager.addTransform(aEntity.entity, .{ .transform = .{ .offset = rend.Point.init(-0.8, -0.8) } });
-    //     _ = try entityManager.addRender(aEntity.entity, .{ .shapeData = .{ .Polygon = aPolygon }, .visible = true });
-    // }
-    // if (font.glyphShapes[33][1]) |aGlyph| {
-    //     var aPolygon = aGlyph;
-    //     aPolygon.fillColor = rend.Colors.RED;
-    //     const aEntity = try entityManager.addEntity();
-    //     _ = try entityManager.addTransform(aEntity.entity, .{ .transform = .{ .offset = rend.Point.init(-0.8, -0.8) } });
-    //     _ = try entityManager.addRender(aEntity.entity, .{ .shapeData = .{ .Polygon = aPolygon }, .visible = true });
-    // }
-
-    // // Bottom-right 'B' (ASCII 66 -> index 34)
-    // if (font.glyphShapes[34][0]) |bGlyph| {
-    //     var bPolygon = bGlyph;
-    //     bPolygon.fillColor = rend.Colors.RED;
-    //     const bEntity = try entityManager.addEntity();
-    //     _ = try entityManager.addTransform(bEntity.entity, .{ .transform = .{ .offset = rend.Point.init(0.8, -0.8) } });
-    //     _ = try entityManager.addRender(bEntity.entity, .{ .shapeData = .{ .Polygon = bPolygon }, .visible = true });
-    // }
-
-    // Top-right 'L' (ASCII 76 -> index 44)
-    // if (font.glyphShapes[44][0]) |lGlyph| {
-    //     var lPolygon = lGlyph;
-    //     lPolygon.fillColor = rend.Colors.YELLOW;
-    //     const lEntity = try entityManager.addEntity();
-    //     _ = try entityManager.addTransform(lEntity.entity, .{ .transform = .{ .offset = rend.Point.init(-0.8, -0.8) } });
-    //     _ = try entityManager.addRender(lEntity.entity, .{ .shapeData = .{ .Polygon = lPolygon }, .visible = true });
-    // }
-
-    // // For 'L' debug - print the actual transformed points
-    // if (font.glyphShapes[44][0]) |lGlyph| {
-    //     std.debug.print("L [{d}] polygon vertices:\n", .{0});
-    //     for (lGlyph.vertices, 0..) |vertex, i| {
-    //         std.debug.print("  [{d}]: ({d:.3}, {d:.3})\n", .{ i, vertex.x, vertex.y });
-    //     }
-    // }
-
-    // std.debug.print("ASCII 'L' (76) -> letter index {d} -> glyph index {d}\n", .{ 76 - 32, font.asciiToGlyph[76 - 32] });
+    const c = 'Z';
+    if (font.charToGlyph.get(c)) |glyphIndex| {
+        if (font.glyphShapes.get(glyphIndex)) |glyph| {
+            const firstContourEnd = glyph.contourEnds[0];
+            const firstContourPoints = glyph.points[0 .. firstContourEnd + 1];
+            var points = try std.ArrayList(rend.Point).initCapacity(allocator, firstContourPoints.len);
+            const fontScale = 0.3;
+            const aspectRatio = 1.78;
+            for (firstContourPoints) |point| {
+                const newPoint =
+                    rend.Point.init(
+                        (point.x * fontScale) / aspectRatio,
+                        point.y * fontScale,
+                    );
+                points.appendAssumeCapacity(newPoint);
+            }
+            const letter = try entityManager.addEntity();
+            _ = try entityManager.addRender(letter.entity, .{ .shapeData = .{ .Polygon = .{
+                .vertices = try points.toOwnedSlice(),
+                .outlineColor = Colors.NEON_BLUE,
+                .center = .{ .x = -0.352, .y = -0.465 },
+                .fillColor = null,
+            } }, .visible = true });
+            _ = try entityManager.addTransform(letter.entity, .{ .transform = .{ .scale = 1.2 } });
+        }
+    }
 
     const ship = try entityManager.addEntityWithConfigs(
-        .{ .Triangle = .{ .fillColor = rend.Colors.BLUE, .outlineColor = rend.Colors.WHITE, .scale = 0.5, .rotation = 0 } },
+        .{ .Triangle = .{ .fillColor = rend.Colors.BLUE, .offset = rend.Point{ .x = 0.6, .y = 0.6 }, .outlineColor = rend.Colors.WHITE, .scale = 0.5, .rotation = 0 } },
         .{ .playerID = 0, .rotationRate = 16, .thrustForce = 1, .shotRate = 4 },
     );
-    // _ = ship;
     _ = try entityManager.addComponent(ship.entity, .{ .Velocity = .{ .velocity = V2.zero() } });
 
     const ship2 = try entityManager.addEntityWithConfigs(
@@ -218,7 +185,6 @@ pub fn main() !void {
     _ = try entityManager.addComponent(ship4.entity, .{ .Velocity = .{ .velocity = V2.zero() } });
 
     // MARK: Main loop
-
     var running = true;
     var lastTime: i64 = std.time.microTimestamp();
     var dt: f32 = 1.0 / 60.0;

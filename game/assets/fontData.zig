@@ -284,9 +284,8 @@ pub const GlyphFlag = packed struct {
 };
 
 pub const FilteredGlyph = struct {
-    points: []V2,
-    contourEnds: []u16,
-
-    contourCount: u16,
-    totalPoints: u16,
+    points: []V2 = &[_]V2{},
+    contourEnds: []u16 = &[_]u16{},
+    contourCount: u16 = 0,
+    totalPoints: u16 = 0,
 };

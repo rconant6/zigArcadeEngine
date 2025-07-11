@@ -198,7 +198,7 @@ fn parseCmapFormatData(
         idRangeOffsets[segment] = reader.readU16BigEndian();
     }
 
-    const glyphArraySize = header.length - (14 + 39 * 2 * 4 + 2); // header, data, pad
+    const glyphArraySize = header.length - (14 + numSegments * 2 * 4 + 2); // header, data, pad
     const glyphs = glyphArraySize / 2;
     var glyphIdArray = try alloc.alloc(u16, glyphs);
     for (0..glyphs) |glyphId| {
@@ -213,48 +213,46 @@ fn parseCmapFormatData(
             if (start <= char and char <= end) break;
         }
 
-        if (segment >= numSegments) continue;
+        if (segment >= numSegments) {
+            continue;
+        }
 
         var glyphIndex: u16 = 0;
         if (idRangeOffsets[segment] == 0) {
             glyphIndex = @as(u16, @intCast(char)) +% idDeltas[segment];
         } else {
-            const arrayIndex = (idRangeOffsets[segment] / 2) + (char - startCounts[segment]);
-            if (arrayIndex >= glyphIdArray.len) continue;
+            const arrayIndex = (idRangeOffsets[segment] / 2) + (char - startCounts[segment]) - (numSegments - segment);
 
-            const glyphId: u16 = glyphIdArray[arrayIndex];
-
-            if (glyphId != 0) {
+            if (arrayIndex < glyphIdArray.len) {
+                const glyphId = glyphIdArray[arrayIndex];
                 glyphIndex = glyphId +% idDeltas[segment];
             }
         }
-        // std.debug.print("CODE: 0x{x}   GLYPH: {d}\n", .{ char, glyphIndex });
+
         try map.put(@as(u32, @intCast(char)), glyphIndex);
     }
 }
 
 fn parseGlyph(
     reader: *FontReader,
-    alloc: *std.mem.Allocator,
+    alloc: *std.mem.Allocator, // main engine allocator
+    talloc: *std.mem.Allocator, // temp arena
     header: GlyfHeader,
     unitsPerEm: u16,
-) !FilteredGlyph { // BUG: don't make optional (just for getting started)
+) !FilteredGlyph {
     const numberOfContours: u16 = if (header.numberOfContours < 0) 0 else @intCast(header.numberOfContours);
-    // printData(GlyfHeader, header, "Header");
     if (header.numberOfContours > 0) {
-        var contourEndPts = try alloc.alloc(u16, numberOfContours);
+        var contourEndPts = try talloc.alloc(u16, numberOfContours);
         for (0..numberOfContours) |i| {
             contourEndPts[i] = reader.readU16BigEndian();
         }
-        // std.debug.print("Original Contour Endpoints: {any}\n", .{contourEndPts});
 
         const totalPoints = contourEndPts[numberOfContours - 1] + 1;
-        // std.debug.print("Total points: {}\n", .{totalPoints});
 
         const instLen = reader.readU16BigEndian();
         reader.skip(instLen);
 
-        var flags = try alloc.alloc(GlyphFlag, totalPoints);
+        var flags = try talloc.alloc(GlyphFlag, totalPoints);
         var flagIndex: usize = 0;
 
         while (flagIndex < totalPoints) {
@@ -273,8 +271,8 @@ fn parseGlyph(
             }
         }
 
-        var xCoords = try alloc.alloc(i32, totalPoints);
-        var yCoords = try alloc.alloc(i32, totalPoints);
+        var xCoords = try talloc.alloc(i32, totalPoints);
+        var yCoords = try talloc.alloc(i32, totalPoints);
 
         // Parse X coordinates
         for (0..totalPoints) |i| {
@@ -302,8 +300,10 @@ fn parseGlyph(
 
         var absX: i32 = 0;
         var absY: i32 = 0;
-        var filteredContourEndPts = try alloc.alloc(u16, contourEndPts.len);
+        var filteredContourEndPts = try std.ArrayList(u16).initCapacity(alloc.*, contourEndPts.len);
+        errdefer filteredContourEndPts.deinit();
         var filteredPoints = try std.ArrayList(V2).initCapacity(alloc.*, totalPoints);
+        errdefer filteredPoints.deinit();
         var filteredPointCount: u16 = 0;
         var filteredIndex: usize = 0;
         for (0..totalPoints) |i| {
@@ -311,10 +311,8 @@ fn parseGlyph(
             absY += yCoords[i];
 
             if (flags[i].onCurve == 1) {
-                const flippedY = header.yMax - absY;
-
                 const fx: f32 = @as(f32, @floatFromInt(absX));
-                const fy: f32 = @as(f32, @floatFromInt(flippedY));
+                const fy: f32 = @as(f32, @floatFromInt(absY));
                 const fEm: f32 = @as(f32, @floatFromInt(unitsPerEm));
 
                 const gameX = (fx / fEm) * 2.0 - 1.0;
@@ -322,27 +320,25 @@ fn parseGlyph(
 
                 filteredPoints.appendAssumeCapacity(V2{ .x = gameX, .y = gameY });
                 filteredPointCount += 1;
-                // std.debug.print("Original[{d}]: (x: {d}, y: {d})\n", .{ filteredIndex, absX, absY });
-                // std.debug.print("ScaledPoint[{d}]: (x: {d}, y: {d})\n", .{ filteredIndex, gameX, gameY });
                 filteredIndex += 1;
             }
 
-            for (contourEndPts, 0..) |endPt, contourIndex| {
+            for (contourEndPts) |endPt| {
                 if (i == endPt) {
-                    filteredContourEndPts[contourIndex] = filteredPointCount - 1;
+                    _ = filteredContourEndPts.pop();
+                    filteredContourEndPts.appendAssumeCapacity(filteredPointCount - 1);
                 }
             }
         }
-        // std.debug.print("New Contour Endpoints: {any}\n", .{filteredContourEndPts});
 
         return FilteredGlyph{
             .points = try filteredPoints.toOwnedSlice(),
-            .contourEnds = try alloc.dupe(u16, filteredContourEndPts),
+            .contourEnds = try filteredContourEndPts.toOwnedSlice(),
             .contourCount = numberOfContours,
             .totalPoints = filteredPointCount,
         };
     }
-    return error.GlyphParsing;
+    return FilteredGlyph{};
 }
 
 pub const Font = struct {
@@ -354,9 +350,9 @@ pub const Font = struct {
     descender: i16 = undefined,
     lineGap: i16 = undefined,
 
-    charToGlyph: std.AutoHashMap(u32, u16) = undefined, // from cmap ASCII 32-126
-    glyphAdvanceWidths: std.ArrayList(Hmetric) = undefined, // how far to advance per char
-    glyphShapes: std.ArrayList(FilteredGlyph) = undefined, // actual renderable points in gameSpace;
+    charToGlyph: std.AutoHashMap(u32, u16) = undefined, // from cmap
+    glyphAdvanceWidths: std.ArrayList(Hmetric) = undefined, // horizontal spacing data
+    glyphShapes: std.AutoHashMap(u16, FilteredGlyph) = undefined, // data for shapes of glyphs
 
     pub fn init(alloc: *std.mem.Allocator, path: []const u8) !Font {
         var arena = std.heap.ArenaAllocator.init(alloc.*);
@@ -405,26 +401,19 @@ pub const Font = struct {
         const locaEntry = getTable(&tableDirectory, "loca") orelse return error.LocaTableNotFound;
         const offsets = try parseLocaTable(&reader, &tempAlloc, locaEntry, numberOfGlyphs);
 
-        var glyphs = try std.ArrayList(FilteredGlyph).initCapacity(alloc.*, numberOfGlyphs);
+        var glyphs = std.AutoHashMap(u16, FilteredGlyph).init(alloc.*);
+        errdefer glyphs.deinit();
         for (0..numberOfGlyphs) |glyphIndex| {
-            if (glyphIndex == 21 or glyphIndex == 65 or glyphIndex == 100) {
-                std.debug.print("GlyphIndex: {d}\n", .{glyphIndex});
-                const start = offsets[glyphIndex];
-                const end = offsets[glyphIndex + 1];
-                if (start == end) continue; // Skip empty glyphs
+            const start = offsets[glyphIndex];
+            const end = offsets[glyphIndex + 1];
+            if (start == end) continue; // Skip empty glyphs
 
-                reader.seek(glyfEntry.offset + start);
-                const header = reader.readStruct(GlyfHeader);
-                reader.rewind(getBytesOfPadding(GlyfHeader));
+            reader.seek(glyfEntry.offset + start);
+            const header = reader.readStruct(GlyfHeader);
+            reader.rewind(getBytesOfPadding(GlyfHeader));
 
-                const glyphData = try parseGlyph(&reader, &tempAlloc, header, unitsPerEm);
-                // printData(FilteredGlyph, glyphData, "Filtered Glyp");
-                // std.debug.print("---------------------\n", .{});
-                // _ = glyphData;
-                // TODO: Store glyphData in font.glyphShapes[glyphIndex]
-                // printData(Hmetric, hMetrics.items[glyphIndex], "HMetric");
-                glyphs.appendAssumeCapacity(glyphData);
-            }
+            const glyphData = try parseGlyph(&reader, alloc, &tempAlloc, header, unitsPerEm);
+            try glyphs.put(@intCast(glyphIndex), glyphData);
         }
 
         return Font{
@@ -442,9 +431,16 @@ pub const Font = struct {
     pub fn deinit(self: *Font) void {
         self.glyphAdvanceWidths.deinit();
         self.charToGlyph.deinit();
+        var iter = self.glyphShapes.iterator();
+        while (iter.next()) |entry| {
+            const glyph = entry.value_ptr.*;
+            self.alloc.free(glyph.points);
+            self.alloc.free(glyph.contourEnds);
+        }
         self.glyphShapes.deinit();
     }
 };
+
 // MARK: Helpers
 fn getBytesOfPadding(comptime T: type) usize {
     return switch (T) {
