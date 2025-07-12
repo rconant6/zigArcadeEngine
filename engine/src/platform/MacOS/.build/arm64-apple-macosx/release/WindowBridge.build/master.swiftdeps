@@ -1,0 +1,6 @@
+version: "Apple Swift version 6.1 (swiftlang-6.1.0.110.21 clang-1700.0.13.3)"
+options: "7795d17bdbdfb0cfebf90b429c7255f48604b37c6458af08b8e6e174ba3bf4aa"
+build_start_time: [1746011440, 623059000]
+build_end_time: [1746011441, 79750000]
+inputs:
+  "/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/SwiftBridge/w/windowBridge.swift": [1746011437, 821607575]

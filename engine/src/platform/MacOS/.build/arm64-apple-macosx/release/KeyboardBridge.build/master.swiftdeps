@@ -1,0 +1,6 @@
+version: "Apple Swift version 6.1 (swiftlang-6.1.0.110.21 clang-1700.0.13.3)"
+options: "c79e395321fa0c2da3107b806de04c31af87d21153ee7789bb5da1f4fb7a2379"
+build_start_time: [1745717233, 762623000]
+build_end_time: [1745717234, 104957000]
+inputs:
+  "/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/SwiftBridge/kb/keyboardBridge.swift": [1745717231, 959139792]

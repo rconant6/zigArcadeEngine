@@ -1,0 +1,4 @@
+module CKeyboardBridge {
+    umbrella "/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/CBridge/kb/include"
+    export *
+}

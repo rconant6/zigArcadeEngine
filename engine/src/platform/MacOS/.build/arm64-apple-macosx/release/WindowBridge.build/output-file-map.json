@@ -1,0 +1,12 @@
+{
+  "": {
+    "dependencies": "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/WindowBridge.d",
+    "object": "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/WindowBridge.o",
+    "swift-dependencies": "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/master.swiftdeps"
+  },
+  "/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/SwiftBridge/w/windowBridge.swift": {
+    "object": "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/windowBridge.swift.o",
+    "swiftmodule": "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/windowBridge~partial.swiftmodule",
+    "swift-dependencies": "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/windowBridge.swiftdeps"
+  }
+}

@@ -1,0 +1,4 @@
+module CWindowBridge {
+    umbrella "/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/CBridge/w/include"
+    export *
+}

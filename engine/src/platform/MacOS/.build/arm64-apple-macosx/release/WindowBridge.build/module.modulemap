@@ -1,0 +1,4 @@
+module WindowBridge {
+    header "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/WindowBridge-Swift.h"
+    requires objc
+}
