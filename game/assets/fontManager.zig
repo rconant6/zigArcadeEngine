@@ -315,8 +315,8 @@ fn parseGlyph(
                 const fy: f32 = @as(f32, @floatFromInt(absY));
                 const fEm: f32 = @as(f32, @floatFromInt(unitsPerEm));
 
-                const gameX = (fx / fEm) * 2.0 - 1.0;
-                const gameY = (fy / fEm) * 2.0 - 1.0;
+                const gameX = (fx / fEm) * 20.0 - 10.0;
+                const gameY = (fy / fEm) * 20.0 - 10.0;
 
                 filteredPoints.appendAssumeCapacity(V2{ .x = gameX, .y = gameY });
                 filteredPointCount += 1;

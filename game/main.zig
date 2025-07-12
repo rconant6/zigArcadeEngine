@@ -99,7 +99,7 @@ pub fn main() !void {
             const firstContourEnd = glyph.contourEnds[0];
             const firstContourPoints = glyph.points[0 .. firstContourEnd + 1];
             var points = try std.ArrayList(rend.Point).initCapacity(allocator, firstContourPoints.len);
-            const fontScale = 0.3;
+            const fontScale = 0.1;
             const aspectRatio = 1.78;
             for (firstContourPoints) |point| {
                 const newPoint =
@@ -121,8 +121,21 @@ pub fn main() !void {
     }
 
     const ship = try entityManager.addEntityWithConfigs(
-        .{ .Triangle = .{ .fillColor = rend.Colors.BLUE, .offset = rend.Point{ .x = 0.6, .y = 0.6 }, .outlineColor = rend.Colors.WHITE, .scale = 0.5, .rotation = 0 } },
-        .{ .playerID = 0, .rotationRate = 16, .thrustForce = 1, .shotRate = 4 },
+        .{
+            .Triangle = .{
+                .fillColor = rend.Colors.BLUE,
+                .offset = rend.Point{ .x = 6, .y = 6 },
+                .outlineColor = rend.Colors.WHITE,
+                .scale = 5,
+                .rotation = 0,
+            },
+        },
+        .{
+            .playerID = 0,
+            .rotationRate = 16,
+            .thrustForce = 5,
+            .shotRate = 4,
+        },
     );
     _ = try entityManager.addComponent(ship.entity, .{ .Velocity = .{ .velocity = V2.zero() } });
 
@@ -131,15 +144,15 @@ pub fn main() !void {
             .Triangle = .{
                 .fillColor = rend.Colors.RED,
                 .outlineColor = rend.Colors.WHITE,
-                .scale = 0.5,
+                .scale = 3.5,
                 .rotation = 0,
-                .offset = rend.Point{ .x = -0.6, .y = -0.6 }, // Lower left position
+                .offset = rend.Point{ .x = -6, .y = -6 }, // Lower left position
             },
         },
         .{
             .playerID = 1,
             .rotationRate = 8, // Half the speed of your original (16000)
-            .thrustForce = 2,
+            .thrustForce = 20,
             .shotRate = 4,
         },
     );
@@ -149,15 +162,15 @@ pub fn main() !void {
             .Triangle = .{
                 .fillColor = rend.Colors.GREEN,
                 .outlineColor = rend.Colors.WHITE,
-                .scale = 0.5,
+                .scale = 2.5,
                 .rotation = 0,
-                .offset = rend.Point{ .x = 0.6, .y = -0.6 }, // Lower right position
+                .offset = rend.Point{ .x = 6, .y = -6 }, // Lower right position
             },
         },
         .{
             .playerID = 2,
             .rotationRate = 24, // 1.5x faster than original
-            .thrustForce = 1,
+            .thrustForce = 10,
             .shotRate = 4,
         },
     );
@@ -167,15 +180,15 @@ pub fn main() !void {
             .Triangle = .{
                 .fillColor = rend.Colors.YELLOW,
                 .outlineColor = rend.Colors.WHITE,
-                .scale = 0.5,
+                .scale = 4,
                 .rotation = 0,
-                .offset = rend.Point{ .x = -0.6, .y = 0.6 }, // Upper left position
+                .offset = rend.Point{ .x = -6, .y = 6 }, // Upper left position
             },
         },
         .{
             .playerID = 3,
             .rotationRate = 4, // Quarter speed of original
-            .thrustForce = 1.5,
+            .thrustForce = 10.5,
             .shotRate = 4,
         },
     );

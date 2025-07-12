@@ -512,10 +512,10 @@ pub const EntityManager = struct {
                     off.x += velocity.x;
                     off.y += velocity.y;
 
-                    if (off.x > 1.0) off.x = -1;
-                    if (off.x < -1.0) off.x = 1;
-                    if (off.y > 1.0) off.y = -1;
-                    if (off.y < -1.0) off.y = 1;
+                    if (off.x > 10.0) off.x = -10;
+                    if (off.x < -10.0) off.x = 10;
+                    if (off.y > 10.0) off.y = -10;
+                    if (off.y < -10.0) off.y = 10;
                 }
             }
         }
