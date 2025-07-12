@@ -9,8 +9,8 @@ pub const AssetManager = struct {
     fonts: std.StringHashMap(Font),
 
     pub fn loadFont(self: *AssetManager, name: []const u8, path: []const u8) !Font {
-        const font = try Font.init(self.allocator, path);
-        // errdefer font.deinit();
+        var font = try Font.init(self.allocator, path);
+        errdefer font.deinit();
 
         try self.fonts.put(name, font);
         return font;
@@ -24,6 +24,10 @@ pub const AssetManager = struct {
     }
 
     pub fn deinit(self: *AssetManager) void {
+        var iter = self.fonts.iterator();
+        while (iter.next()) |font| {
+            font.value_ptr.*.deinit();
+        }
         self.fonts.deinit();
     }
 };

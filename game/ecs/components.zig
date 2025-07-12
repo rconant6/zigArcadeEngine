@@ -1,6 +1,10 @@
 const rend = @import("types.zig").rend;
 const V2 = @import("../math.zig").V2;
 
+pub const TextComp = struct {
+    char: u8 = 0,
+};
+
 pub const PlayerComp = struct {
     playerID: u8 = 0,
 };

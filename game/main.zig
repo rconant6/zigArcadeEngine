@@ -91,7 +91,6 @@ pub fn main() !void {
     // var font = try assetManager.loadFont("Arcade", "fonts/arcadeFont.ttf");
     var font = try assetManager.loadFont(fontName, "fonts/Orbitron.ttf");
     std.debug.print("[MAIN] loaded {s} font\n", .{fontName});
-    defer font.deinit();
 
     const c = 'Z';
     if (font.charToGlyph.get(c)) |glyphIndex| {
