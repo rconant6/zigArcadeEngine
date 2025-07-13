@@ -9,3 +9,7 @@ const rend = @import("renderer");
 const Color = rend.Color;
 const Renderer = rend.Renderer;
 const Polygon = rend.Polygon;
+
+const asset = @import("assets");
+
+const ecs = @import("ecs");

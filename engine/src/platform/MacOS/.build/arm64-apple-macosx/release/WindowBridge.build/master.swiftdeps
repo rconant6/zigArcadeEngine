@@ -1,6 +1,6 @@
-version: "Apple Swift version 6.1 (swiftlang-6.1.0.110.21 clang-1700.0.13.3)"
-options: "7795d17bdbdfb0cfebf90b429c7255f48604b37c6458af08b8e6e174ba3bf4aa"
-build_start_time: [1746011440, 623059000]
-build_end_time: [1746011441, 79750000]
+version: "Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)"
+options: "20046c8bcebd0d51c2a0f27752540ba77c86b3cba6cb7dbd25e9319a8f008b30"
+build_start_time: [1752367347, 145378000]
+build_end_time: [1752367351, 33398000]
 inputs:
-  "/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/SwiftBridge/w/windowBridge.swift": [1746011437, 821607575]
+  "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/Sources/SwiftBridge/w/windowBridge.swift": [1746577263, 173595541]

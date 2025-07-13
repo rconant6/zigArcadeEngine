@@ -2,14 +2,15 @@
 import PackageDescription
 // expected 'name:dependencies:path:exclude:sources:resources:publicHeadersPath:packageAccess:cSettings:cxxSettings:swiftSettings:linkerSettings:plugins:')
 let package = Package(
-    name: "Bridge",
+    name: "macOSBridge",
     products: [
         .library(
-            name: "Bridge", 
+            name: "macOSBridge", 
             type: .dynamic, 
             targets: ["KeyboardBridge", "WindowBridge"],
         ),
     ],
+
     targets: [
         .target(
             name: "CKeyboardBridge",

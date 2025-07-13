@@ -1,93 +1,130 @@
 const std = @import("std");
 
-pub fn build(b: *std.Build) !void {
+pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // TODO: add the copy of resources in
+    // Platform detection and bridge setup
+    const target_info = target.result;
+    const engine = b.addStaticLibrary(.{
+        .name = "engine",
+        .root_source_file = b.path("engine/src/engine.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
 
-    const exe = b.addExecutable(.{
+    switch (target_info.os.tag) {
+        .macos => {
+            const arch_string = switch (target_info.cpu.arch) {
+                .aarch64 => "arm64",
+                .x86_64 => "x86_64",
+                else => @panic("Unsupported architecture for macOS Swift bridge"),
+            };
+
+            const swiftBuildStep = b.addSystemCommand(&[_][]const u8{
+                "swift", "build",
+                "-c",    "release",
+            });
+            swiftBuildStep.setCwd(b.path("engine/src/platform/MacOS"));
+
+            const sourceLibPath = std.fmt.allocPrint(
+                b.allocator,
+                "engine/src/platform/MacOS/.build/{s}-apple-macosx/release/libmacOSBridge.dylib",
+                .{arch_string},
+            ) catch @panic("Failed to allocate source library path");
+
+            const copyLibStep = b.addInstallFile(b.path(sourceLibPath), "lib/libmacOSBridge.dylib");
+            copyLibStep.step.dependOn(&swiftBuildStep.step);
+
+            engine.step.dependOn(&copyLibStep.step);
+
+            engine.addLibraryPath(b.path("zig-out/lib"));
+            engine.linkSystemLibrary("macOSBridge");
+            engine.linkFramework("Cocoa");
+        },
+        .windows => {
+            @panic("Windows platform bridge not implemented yet");
+        },
+        .linux => {
+            @panic("Linux platform bridge not implemented yet");
+        },
+        else => {
+            @panic("Unsupported platform for engine bridge");
+        },
+    }
+
+    const mathModule = b.addModule("math", .{
+        .root_source_file = b.path("engine/src/math/math.zig"),
+    });
+    const rendererModule = b.addModule("renderer", .{
+        .root_source_file = b.path("engine/src/renderer/renderer.zig"),
+    });
+    const ecsModule = b.addModule("ecs", .{
+        .root_source_file = b.path("engine/src/ecs/ecs.zig"),
+    });
+    const assetModule = b.addModule("asset", .{
+        .root_source_file = b.path("engine/src/assets/assets.zig"),
+    });
+
+    engine.root_module.addImport("math", mathModule);
+
+    rendererModule.addImport("math", mathModule);
+    engine.root_module.addImport("renderer", rendererModule);
+
+    assetModule.addImport("math", mathModule);
+    engine.root_module.addImport("asset", assetModule);
+
+    ecsModule.addImport("math", mathModule);
+    ecsModule.addImport("renderer", rendererModule);
+    engine.root_module.addImport("ecs", ecsModule);
+
+    // Zasteroids game executable
+    const zasteroids = b.addExecutable(.{
         .name = "zasteroids",
-        .root_source_file = b.path("game/main.zig"),
-        .optimize = optimize,
-        .target = target,
-    });
-
-    // MACOS bridging dynamic library
-    exe.addLibraryPath(b.path("MacOS/.build/arm64-apple-macosx/release"));
-    exe.addIncludePath(b.path("MacOS/Sources/CBridge/include"));
-    exe.linkSystemLibrary("Bridge");
-    exe.linkFramework("Cocoa");
-
-    const keyboard_module = b.createModule(.{
-        .root_source_file = b.path("game/bridge.zig"),
-    });
-    exe.root_module.addImport("keyboard", keyboard_module);
-
-    // Copy assets that are required by the game
-    const install_resources = b.addInstallDirectory(.{
-        .source_dir = b.path("game/resources"),
-        .install_dir = .bin,
-        .install_subdir = "resources",
-    });
-    exe.step.dependOn(&install_resources.step);
-
-    // Add individual modules for each file your tests need
-    const renderer_mod = b.createModule(.{
-        .root_source_file = b.path("game/renderer.zig"),
-    });
-    const ecs_mod = b.createModule(.{
-        .root_source_file = b.path("game/ecs.zig"),
-    });
-    const asset_mod = b.createModule(.{
-        .root_source_file = b.path("game/assets.zig"),
-    });
-    exe.root_module.addImport("renderer", renderer_mod);
-    exe.root_module.addImport("ecs", ecs_mod);
-    exe.root_module.addImport("asset", asset_mod);
-
-    const run_cmd = b.addRunArtifact(exe);
-    const run_step = b.step("run", "Run zasteroids");
-    run_step.dependOn(&run_cmd.step);
-
-    // addTestStep(b, "test", "Run all tests", "tests/main.zig", target, optimize);
-    // addTestStep(b, "test-entity", "Run entity tests", "tests/entity.zig", target, optimize);
-    // addTestStep(b, "test-component", "Run component tests", "tests/component.zig", target, optimize);
-    // addTestStep(b, "test-render", "Run render tests", "tests/render.zig", target, optimize);
-
-    b.installArtifact(exe);
-}
-
-fn addTestStep(
-    b: *std.Build,
-    name: []const u8,
-    description: []const u8,
-    rootFile: []const u8,
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-) void {
-    const testStep = b.step(name, description);
-
-    const unitTests = b.addTest(.{
-        .root_source_file = b.path(rootFile),
+        .root_source_file = b.path("zasteroids/src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    // Add individual modules for each file your tests need
-    const renderer_mod = b.createModule(.{
-        .root_source_file = b.path("game/renderer.zig"),
-    });
-    const ecs_mod = b.createModule(.{
-        .root_source_file = b.path("game/ecs.zig"),
-    });
-    ecs_mod.addImport("renderer", renderer_mod);
+    // After creating zasteroids executable, add platform linking
+    switch (target_info.os.tag) {
+        .macos => {
+            zasteroids.addLibraryPath(b.path("zig-out/lib"));
+            zasteroids.linkSystemLibrary("macOSBridge");
+            zasteroids.linkFramework("Cocoa");
+        },
+        .windows => {
+            @panic("Windows platform bridge not implemented yet");
+        },
+        .linux => {
+            @panic("Linux platform bridge not implemented yet");
+        },
+        else => {
+            @panic("Unsupported platform for engine bridge");
+        },
+    }
 
-    unitTests.root_module.addImport("renderer", renderer_mod);
-    unitTests.root_module.addImport("ecs", ecs_mod);
-    const run_tests = b.addRunArtifact(unitTests);
+    // Link engine library and add module imports
+    zasteroids.linkLibrary(engine);
+    zasteroids.root_module.addImport("math", mathModule);
+    zasteroids.root_module.addImport("renderer", rendererModule);
+    zasteroids.root_module.addImport("ecs", ecsModule);
+    zasteroids.root_module.addImport("asset", assetModule);
 
-    // run_tests.addArgs(&.{ "--verbose", "--summary all" });
+    // Install targets
+    const install_zasteroids = b.addInstallArtifact(zasteroids, .{});
 
-    testStep.dependOn(&run_tests.step);
+    // Default build includes zasteroids
+    b.getInstallStep().dependOn(&install_zasteroids.step);
+
+    // Zasteroids-specific build step
+    const zasteroids_step = b.step("zasteroids", "Build zasteroids game");
+    zasteroids_step.dependOn(&install_zasteroids.step);
+
+    // Run step
+    const run_zasteroids = b.addRunArtifact(zasteroids);
+    const zasteroids_run_step = b.step("zasteroids-run", "Run zasteroids game");
+    zasteroids_run_step.dependOn(&run_zasteroids.step);
+
+    b.installArtifact(engine);
 }

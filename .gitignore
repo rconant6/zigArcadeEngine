@@ -8,6 +8,7 @@ zig-cache/
 .DS_Store
 Thumbs.db
 */.DS_Store
-
+engine/src/platform/MacOS/.build/
+engine/src/platform/MacOS/.swiftpm/
 
 

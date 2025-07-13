@@ -19,27 +19,27 @@
   "swiftCommands" : {
     "C.KeyboardBridge-arm64-apple-macosx15.0-release.module" : {
       "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
-      "fileList" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/sources",
-      "importPath" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/Modules",
+      "fileList" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/sources",
+      "importPath" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/Modules",
       "inputs" : [
         {
           "kind" : "file",
-          "name" : "/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/SwiftBridge/kb/keyboardBridge.swift"
+          "name" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/Sources/SwiftBridge/kb/keyboardBridge.swift"
         },
         {
           "kind" : "file",
-          "name" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
+          "name" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
         },
         {
           "kind" : "file",
-          "name" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/sources"
+          "name" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/sources"
         }
       ],
       "isLibrary" : true,
       "moduleName" : "KeyboardBridge",
-      "moduleOutputPath" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/Modules/KeyboardBridge.swiftmodule",
+      "moduleOutputPath" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/Modules/KeyboardBridge.swiftmodule",
       "objects" : [
-        "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/keyboardBridge.swift.o"
+        "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/keyboardBridge.swift.o"
       ],
       "otherArguments" : [
         "-target",
@@ -48,23 +48,23 @@
         "-j12",
         "-DSWIFT_PACKAGE",
         "-Xcc",
-        "-fmodule-map-file=/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/CKeyboardBridge.build/module.modulemap",
+        "-fmodule-map-file=/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/CKeyboardBridge.build/module.modulemap",
         "-Xcc",
         "-I",
         "-Xcc",
-        "/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/CBridge/kb/include",
+        "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/Sources/CBridge/kb/include",
         "-module-cache-path",
-        "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/ModuleCache",
+        "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/ModuleCache",
         "-parseable-output",
         "-parse-as-library",
         "-emit-objc-header",
         "-emit-objc-header-path",
-        "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/KeyboardBridge-Swift.h",
+        "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/KeyboardBridge-Swift.h",
         "-color-diagnostics",
         "-swift-version",
         "6",
         "-sdk",
-        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.4.sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
         "-F",
         "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
         "-F",
@@ -77,7 +77,7 @@
         "-Xcc",
         "-isysroot",
         "-Xcc",
-        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.4.sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
         "-Xcc",
         "-F",
         "-Xcc",
@@ -93,47 +93,47 @@
         "-package-name",
         "macos"
       ],
-      "outputFileMapPath" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/output-file-map.json",
+      "outputFileMapPath" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/output-file-map.json",
       "outputs" : [
         {
           "kind" : "file",
-          "name" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/keyboardBridge.swift.o"
+          "name" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/keyboardBridge.swift.o"
         },
         {
           "kind" : "file",
-          "name" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/Modules/KeyboardBridge.swiftmodule"
+          "name" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/Modules/KeyboardBridge.swiftmodule"
         }
       ],
       "prepareForIndexing" : false,
       "sources" : [
-        "/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/SwiftBridge/kb/keyboardBridge.swift"
+        "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/Sources/SwiftBridge/kb/keyboardBridge.swift"
       ],
-      "tempsPath" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build",
+      "tempsPath" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build",
       "wholeModuleOptimization" : true
     },
     "C.WindowBridge-arm64-apple-macosx15.0-release.module" : {
       "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
-      "fileList" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/sources",
-      "importPath" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/Modules",
+      "fileList" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/sources",
+      "importPath" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/Modules",
       "inputs" : [
         {
           "kind" : "file",
-          "name" : "/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/SwiftBridge/w/windowBridge.swift"
+          "name" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/Sources/SwiftBridge/w/windowBridge.swift"
         },
         {
           "kind" : "file",
-          "name" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
+          "name" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
         },
         {
           "kind" : "file",
-          "name" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/sources"
+          "name" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/sources"
         }
       ],
       "isLibrary" : true,
       "moduleName" : "WindowBridge",
-      "moduleOutputPath" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/Modules/WindowBridge.swiftmodule",
+      "moduleOutputPath" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/Modules/WindowBridge.swiftmodule",
       "objects" : [
-        "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/windowBridge.swift.o"
+        "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/windowBridge.swift.o"
       ],
       "otherArguments" : [
         "-target",
@@ -142,23 +142,23 @@
         "-j12",
         "-DSWIFT_PACKAGE",
         "-Xcc",
-        "-fmodule-map-file=/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/CWindowBridge.build/module.modulemap",
+        "-fmodule-map-file=/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/CWindowBridge.build/module.modulemap",
         "-Xcc",
         "-I",
         "-Xcc",
-        "/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/CBridge/w/include",
+        "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/Sources/CBridge/w/include",
         "-module-cache-path",
-        "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/ModuleCache",
+        "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/ModuleCache",
         "-parseable-output",
         "-parse-as-library",
         "-emit-objc-header",
         "-emit-objc-header-path",
-        "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/WindowBridge-Swift.h",
+        "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/WindowBridge-Swift.h",
         "-color-diagnostics",
         "-swift-version",
         "6",
         "-sdk",
-        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.4.sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
         "-F",
         "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
         "-F",
@@ -171,7 +171,7 @@
         "-Xcc",
         "-isysroot",
         "-Xcc",
-        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.4.sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
         "-Xcc",
         "-F",
         "-Xcc",
@@ -187,22 +187,22 @@
         "-package-name",
         "macos"
       ],
-      "outputFileMapPath" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/output-file-map.json",
+      "outputFileMapPath" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/output-file-map.json",
       "outputs" : [
         {
           "kind" : "file",
-          "name" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/windowBridge.swift.o"
+          "name" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/windowBridge.swift.o"
         },
         {
           "kind" : "file",
-          "name" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/Modules/WindowBridge.swiftmodule"
+          "name" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/Modules/WindowBridge.swiftmodule"
         }
       ],
       "prepareForIndexing" : false,
       "sources" : [
-        "/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/SwiftBridge/w/windowBridge.swift"
+        "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/Sources/SwiftBridge/w/windowBridge.swift"
       ],
-      "tempsPath" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build",
+      "tempsPath" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build",
       "wholeModuleOptimization" : true
     }
   },
@@ -220,32 +220,32 @@
       "-num-threads",
       "12",
       "-c",
-      "/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/SwiftBridge/kb/keyboardBridge.swift",
+      "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/Sources/SwiftBridge/kb/keyboardBridge.swift",
       "-I",
-      "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/Modules",
+      "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/Modules",
       "-target",
       "arm64-apple-macosx10.13",
       "-O",
       "-j12",
       "-DSWIFT_PACKAGE",
       "-Xcc",
-      "-fmodule-map-file=/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/CKeyboardBridge.build/module.modulemap",
+      "-fmodule-map-file=/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/CKeyboardBridge.build/module.modulemap",
       "-Xcc",
       "-I",
       "-Xcc",
-      "/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/CBridge/kb/include",
+      "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/Sources/CBridge/kb/include",
       "-module-cache-path",
-      "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/ModuleCache",
+      "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/ModuleCache",
       "-parseable-output",
       "-parse-as-library",
       "-emit-objc-header",
       "-emit-objc-header-path",
-      "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/KeyboardBridge-Swift.h",
+      "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/KeyboardBridge-Swift.h",
       "-color-diagnostics",
       "-swift-version",
       "6",
       "-sdk",
-      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.4.sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
       "-F",
       "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
       "-F",
@@ -258,7 +258,7 @@
       "-Xcc",
       "-isysroot",
       "-Xcc",
-      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.4.sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
       "-Xcc",
       "-F",
       "-Xcc",
@@ -286,32 +286,32 @@
       "-num-threads",
       "12",
       "-c",
-      "/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/SwiftBridge/w/windowBridge.swift",
+      "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/Sources/SwiftBridge/w/windowBridge.swift",
       "-I",
-      "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/Modules",
+      "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/Modules",
       "-target",
       "arm64-apple-macosx10.13",
       "-O",
       "-j12",
       "-DSWIFT_PACKAGE",
       "-Xcc",
-      "-fmodule-map-file=/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/CWindowBridge.build/module.modulemap",
+      "-fmodule-map-file=/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/CWindowBridge.build/module.modulemap",
       "-Xcc",
       "-I",
       "-Xcc",
-      "/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/CBridge/w/include",
+      "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/Sources/CBridge/w/include",
       "-module-cache-path",
-      "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/ModuleCache",
+      "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/ModuleCache",
       "-parseable-output",
       "-parse-as-library",
       "-emit-objc-header",
       "-emit-objc-header-path",
-      "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/WindowBridge-Swift.h",
+      "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/WindowBridge-Swift.h",
       "-color-diagnostics",
       "-swift-version",
       "6",
       "-sdk",
-      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.4.sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
       "-F",
       "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
       "-F",
@@ -324,7 +324,7 @@
       "-Xcc",
       "-isysroot",
       "-Xcc",
-      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.4.sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
       "-Xcc",
       "-F",
       "-Xcc",
@@ -367,7 +367,35 @@
     "enableAllTraits" : false
   },
   "writeCommands" : {
-    "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/Bridge.product/Objects.LinkFileList" : {
+    "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/Sources/SwiftBridge/kb/keyboardBridge.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/sources"
+    },
+    "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/Sources/SwiftBridge/w/windowBridge.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/sources"
+    },
+    "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/macOSBridge.product/Objects.LinkFileList" : {
       "alwaysOutOfDate" : false,
       "inputs" : [
         {
@@ -376,44 +404,16 @@
         },
         {
           "kind" : "file",
-          "name" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/keyboardBridge.swift.o"
+          "name" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/keyboardBridge.swift.o"
         },
         {
           "kind" : "file",
-          "name" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/windowBridge.swift.o"
+          "name" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/windowBridge.swift.o"
         }
       ],
-      "outputFilePath" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/Bridge.product/Objects.LinkFileList"
+      "outputFilePath" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/macOSBridge.product/Objects.LinkFileList"
     },
-    "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/sources" : {
-      "alwaysOutOfDate" : false,
-      "inputs" : [
-        {
-          "kind" : "virtual",
-          "name" : "<sources-file-list>"
-        },
-        {
-          "kind" : "file",
-          "name" : "/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/SwiftBridge/kb/keyboardBridge.swift"
-        }
-      ],
-      "outputFilePath" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/sources"
-    },
-    "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/sources" : {
-      "alwaysOutOfDate" : false,
-      "inputs" : [
-        {
-          "kind" : "virtual",
-          "name" : "<sources-file-list>"
-        },
-        {
-          "kind" : "file",
-          "name" : "/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/SwiftBridge/w/windowBridge.swift"
-        }
-      ],
-      "outputFilePath" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/WindowBridge.build/sources"
-    },
-    "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt" : {
+    "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt" : {
       "alwaysOutOfDate" : true,
       "inputs" : [
         {
@@ -425,7 +425,7 @@
           "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
         }
       ],
-      "outputFilePath" : "/Users/randy/Developer/zig/zasteroids2/MacOS/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
+      "outputFilePath" : "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
     }
   }
 }
