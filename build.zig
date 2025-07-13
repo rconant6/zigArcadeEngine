@@ -53,6 +53,9 @@ pub fn build(b: *std.Build) void {
         },
     }
 
+    const platformModule = b.addModule("platform", .{
+        .root_source_file = b.path("engine/src/platform/platform.zig"),
+    });
     const mathModule = b.addModule("math", .{
         .root_source_file = b.path("engine/src/math/math.zig"),
     });
@@ -67,6 +70,8 @@ pub fn build(b: *std.Build) void {
     });
 
     engine.root_module.addImport("math", mathModule);
+
+    engine.root_module.addImport("platform", platformModule);
 
     rendererModule.addImport("math", mathModule);
     engine.root_module.addImport("renderer", rendererModule);
@@ -107,8 +112,9 @@ pub fn build(b: *std.Build) void {
     // Link engine library and add module imports
     zasteroids.linkLibrary(engine);
     zasteroids.root_module.addImport("math", mathModule);
-    zasteroids.root_module.addImport("renderer", rendererModule);
     zasteroids.root_module.addImport("ecs", ecsModule);
+    zasteroids.root_module.addImport("renderer", rendererModule);
+    zasteroids.root_module.addImport("platform", platformModule);
     zasteroids.root_module.addImport("asset", assetModule);
 
     // Install targets

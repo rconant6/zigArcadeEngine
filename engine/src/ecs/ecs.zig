@@ -14,11 +14,11 @@ pub const Entity = @import("entity.zig").Entity;
 pub const EntityManager = @import("ecsManager.zig").EntityManager;
 
 // TODO: refactor and move to the game / engine split
-// const cmd = @import("commands.zig");
-// pub const Command = cmd.Command;
-// pub const EntityCommand = cmd.EntityCommand;
-// pub const InputCommand = cmd.InputCommand;
-// pub const InputWrapper = cmd.InputWrapper;
+const cmd = @import("commands.zig");
+pub const Command = cmd.Command;
+pub const EntityCommand = cmd.EntityCommand;
+pub const InputCommand = cmd.InputCommand;
+pub const InputWrapper = cmd.InputWrapper;
 
 const comp = @import("components.zig");
 pub const ControlComp = comp.ControlComp;

@@ -1,10 +1,10 @@
 const std = @import("std");
 pub const c = @cImport({
-    @cInclude("/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/CBridge/kb/include/kbBridge.h");
-    @cInclude("/Users/randy/Developer/zig/zasteroids2/MacOS/Sources/CBridge/w/include/wBridge.h");
+    @cInclude("/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/Sources/CBridge/kb/include/kbBridge.h");
+    @cInclude("/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/Sources/CBridge/w/include/wBridge.h");
 });
 
-pub const Color = @import("renderer").Color;
+// pub const Color = @import("renderer").Color;
 
 // MARK: Window Bridging
 pub const WindowConfig = struct {
@@ -50,7 +50,7 @@ pub const Window = struct {
     }
 
     // link data from the renderer
-    pub fn updateWindowPixels(self: *Window, colors: []const Color, width: usize, height: usize) void {
+    pub fn updateWindowPixels(self: *Window, colors: []const u8, width: usize, height: usize) void {
         c.wb_updateWindowPixels(
             self.id,
             @ptrCast(colors.ptr),

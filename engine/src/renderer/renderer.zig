@@ -23,3 +23,4 @@ const gameToScreen = trans.gameToScreen;
 const screenToGame = trans.screenToGame;
 
 const fb = @import("frameBuffer.zig");
+pub const FrameBuffer = fb.FrameBuffer;
