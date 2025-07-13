@@ -1,42 +1,4 @@
-const std = @import("std");
-
-const bge = @import("bridge.zig");
-const KeyCodes = bge.GameKeyCode;
-
-const gsm = @import("gameStateManager.zig");
-const GameStateManager = gsm.GameStateManager;
-
-const ecs = @import("ecs.zig");
-const EntityManager = ecs.EntityManager;
-
-const ipm = @import("inputManager.zig");
-const InputManager = ipm.InputManager;
-
-const rend = @import("renderer");
-const Renderer = rend.Renderer;
-const Colors = rend.Colors;
-const Point = rend.Point;
-const Polygon = rend.Polygon;
-
-const asset = @import("assets.zig");
-const AssetManager = asset.AssetManager;
-const Font = asset.Font;
-
-const math = @import("math.zig");
-const V2 = math.V2;
-
-const Config = struct {
-    const TARGET_FPS: f32 = 60.0;
-    const TARGET_FRAME_TIME_US: i64 = @intFromFloat((1.0 / TARGET_FPS) * 1_000_000);
-    const WIDTH: i32 = 1600;
-    const HEIGHT: i32 = 900;
-};
-
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    var allocator = gpa.allocator();
-
     // MARK: External stuff that feeds the game
     // Initialize the application
     const app = bge.c.wb_initApplication();
@@ -68,21 +30,6 @@ pub fn main() !void {
 
     var stateManager = GameStateManager.init();
     defer stateManager.deinit();
-
-    var entityManager = EntityManager.init(&allocator) catch |err| {
-        std.process.fatal("[MAIN] failed to initialize entity manager: {}\n", .{err});
-    };
-    defer entityManager.deinit();
-
-    var assetManager = AssetManager.init(&allocator) catch |err| {
-        std.process.fatal("[MAIN] failed to initialize asset manager: {}\n", .{err});
-    };
-    defer assetManager.deinit();
-
-    var renderer = Renderer.init(&allocator, Config.WIDTH, Config.HEIGHT) catch |err| {
-        std.process.fatal("[MAIN] failed to initialize renderer: {}\n", .{err});
-    };
-    defer renderer.deinit();
 
     const fontName = "Orbitron";
     // var font = try assetManager.loadFont("Silkscreen", "fonts/Silkscreen.ttf");
@@ -231,8 +178,9 @@ pub fn main() !void {
         entityManager.renderSystem(&renderer);
         renderer.endFrame();
 
+        const rawBytes: []u8 = std.mem.sliceAsBytes(renderer.frameBuffer.frontBuffer);
         window.updateWindowPixels(
-            renderer.getRawFrameBuffer(),
+            rawBytes,
             Config.WIDTH,
             Config.HEIGHT,
         );

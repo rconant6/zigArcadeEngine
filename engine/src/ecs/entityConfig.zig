@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const ecs = @import("ecs");
+const ecs = @import("ecs.zig");
 const Color = ecs.Color;
 const Point = ecs.V2;
 
@@ -52,9 +52,9 @@ pub const TriangleConfig = struct {
     scale: ?f32 = null,
 
     vertices: [3]Point = .{
-        Point.init(0.15, 0.15),
-        Point.init(-0.15, 0.15),
-        Point.init(0.0, -0.15),
+        .{ .x = 0.15, .y = 0.15 },
+        .{ .x = -0.15, .y = 0.15 },
+        .{ .x = 0.0, .y = -0.15 },
     },
     outlineColor: ?Color,
     fillColor: ?Color,

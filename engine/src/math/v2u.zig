@@ -21,6 +21,10 @@ pub const V2U = struct {
         return V2U{ .x = self.x / scalar, .y = self.y / scalar };
     }
 
+    pub fn eql(self: V2U, other: V2U) bool {
+        return self.x == other.x and self.y == other.y;
+    }
+
     pub fn magnitude(self: V2U) f32 {
         const fx: f32 = @floatFromInt(self.x);
         const fy: f32 = @floatFromInt(self.y);

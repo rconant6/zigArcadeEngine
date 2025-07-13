@@ -10,9 +10,34 @@ const Point = rend.GamePoint;
 const Polygon = rend.Polygon;
 const Rectangle = rend.Rectangle;
 const ScreenPoint = rend.ScreenPoint;
-const ShapeData = rend.ShapeData;
-const Transform = rend.Transform;
 const Triangle = rend.Triangle;
+
+const math = @import("math");
+const GamePoint = math.V2;
+
+pub const Transform = struct {
+    offset: ?GamePoint = null,
+    rotation: ?f32 = null,
+    scale: ?f32 = null,
+};
+
+pub const ShapeType = enum {
+    Circle,
+    Ellipse,
+    Line,
+    Rectangle,
+    Triangle,
+    Polygon,
+};
+
+pub const ShapeData = union(ShapeType) {
+    Circle: Circle,
+    Ellipse: Ellipse,
+    Line: Line,
+    Rectangle: Rectangle,
+    Triangle: Triangle,
+    Polygon: Polygon,
+};
 
 pub const Renderer = struct {
     frameBuffer: FrameBuffer,
@@ -122,24 +147,24 @@ pub const Renderer = struct {
 
     // MARK: Internal drawing helpers
     fn scalePt(point: Point, scale: f32) Point {
-        return Point.init(point.x * scale, point.y * scale);
+        return .{ .x = point.x * scale, .y = point.y * scale };
     }
 
     fn rotatePt(point: Point, rot: f32) Point {
         const cos_r = std.math.cos(rot);
         const sin_r = std.math.sin(rot);
         const oldX = point.x;
-        return Point.init(
-            oldX * cos_r - point.y * sin_r,
-            oldX * sin_r + point.y * cos_r,
-        );
+        return .{
+            .x = oldX * cos_r - point.y * sin_r,
+            .y = oldX * sin_r + point.y * cos_r,
+        };
     }
 
     fn movePt(point: Point, pos: Point) Point {
-        return Point.init(
-            point.x + pos.x,
-            point.y + pos.y,
-        );
+        return .{
+            .x = point.x + pos.x,
+            .y = point.y + pos.y,
+        };
     }
 
     fn transformPoint(point: Point, transform: Transform) Point {
@@ -218,7 +243,7 @@ pub const Renderer = struct {
         const screenStart = renderer.gameToScreen(start);
         const screenEnd = renderer.gameToScreen(end);
 
-        if (screenStart.isSamePoint(screenEnd)) return drawPoint(renderer, start, c);
+        if (screenStart.eql(screenEnd)) return drawPoint(renderer, start, c);
         var x = screenStart.x;
         var y = screenStart.y;
         const endX = screenEnd.x;
@@ -333,7 +358,7 @@ pub const Renderer = struct {
 
     fn drawCircleFilled(renderer: *Renderer, circle: Circle, color: Color) void {
         const center = renderer.gameToScreen(circle.origin);
-        const edge = Point.init(circle.origin.x + circle.radius, circle.origin.y);
+        const edge: Point = .{ .x = circle.origin.x + circle.radius, .y = circle.origin.y };
         const edgeScreen = renderer.gameToScreen(edge);
         const screenRadius: i32 = edgeScreen.x - center.x;
 
@@ -377,7 +402,7 @@ pub const Renderer = struct {
 
     fn drawCircleOutline(renderer: *Renderer, circle: Circle, color: Color) void {
         const center = renderer.gameToScreen(circle.origin);
-        const edge = Point.init(circle.origin.x + circle.radius, circle.origin.y);
+        const edge: Point = .{ .x = circle.origin.x + circle.radius, .y = circle.origin.y };
         const edgeScreen = renderer.gameToScreen(edge);
         const screenRadius: i32 = edgeScreen.x - center.x;
 

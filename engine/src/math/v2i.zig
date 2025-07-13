@@ -21,6 +21,10 @@ pub const V2I = struct {
         return V2I{ .x = @divFloor(self.x, scalar), .y = @divFloor(self.y, scalar) };
     }
 
+    pub fn eql(self: V2I, other: V2I) bool {
+        return self.x == other.x and self.y == other.y;
+    }
+
     pub fn magnitude(self: V2I) f32 {
         const fx: f32 = @floatFromInt(self.x);
         const fy: f32 = @floatFromInt(self.y);

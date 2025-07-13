@@ -21,6 +21,11 @@ pub const V2 = struct {
         return V2{ .x = self.x / scalar, .y = self.y / scalar };
     }
 
+    pub fn eql(self: V2, other: V2) bool {
+        const epsilon = 0.0001;
+        return @abs(self.x - other.x) < epsilon and @abs(self.y - other.y) < epsilon;
+    }
+
     pub fn magnitude(self: V2) f32 {
         return std.math.sqrt(self.x * self.x + self.y * self.y);
     }
@@ -33,7 +38,5 @@ pub const V2 = struct {
         return (self.sub(other)).magnitude();
     }
 
-    pub fn zero() V2 {
-        return .{ .x = 0, .y = 0 };
-    }
+    pub const ZERO = V2{ .x = 0, .y = 0 };
 };

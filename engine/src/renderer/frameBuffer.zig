@@ -20,9 +20,8 @@ pub const FrameBuffer = struct {
         const front = bufferMemory[0..bufSize];
         const back = bufferMemory[bufSize..];
 
-        const defaultColor = Color.init(0, 0, 0, 0);
         for (bufferMemory) |*pixel| {
-            pixel.* = defaultColor;
+            pixel.* = Color.init(0, 0, 0, 1);
         }
 
         return .{

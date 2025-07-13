@@ -52,23 +52,18 @@ class RenderView: KeyHandlingView {
         )
     }
     
-    func updateFromColors(colors: UnsafePointer<Color>, width: Int, height: Int) {
-        guard let buffer = imageBuffer else { return }
-        guard width == self.width && height == self.height else { return }
-        
-        // Convert float colors to 8-bit RGBA
-        for i in 0..<(width * height) {
-            let color = colors[i]
-            buffer[i*4 + 0] = UInt8(min(255, max(0, color.r * 255)))
-            buffer[i*4 + 1] = UInt8(min(255, max(0, color.g * 255)))
-            buffer[i*4 + 2] = UInt8(min(255, max(0, color.b * 255)))
-            buffer[i*4 + 3] = UInt8(min(255, max(0, color.a * 255)))
-        }
-        
-        // Trigger redraw
-        self.needsDisplay = true
-    }
     
+func updateFromRawPixels(pixels: UnsafePointer<UInt8>, width: Int, height: Int) {
+    guard let buffer = imageBuffer else { return }
+    guard width == self.width && height == self.height else { return }
+    
+    // Direct memory copy - zero conversions!
+    memcpy(buffer, pixels, width * height * 4)
+    
+    // Trigger redraw
+    self.needsDisplay = true
+}
+
     override func draw(_ dirtyRect: NSRect) {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
         
@@ -106,10 +101,8 @@ public final class WindowManager {
         )
 
         window.title = String(cString: config.title)
-        window.isReleasedWhenClosed = false
-        window.backgroundColor = NSColor.systemBlue  // Make it visibly blue for testing
-    
-    
+        window.isReleasedWhenClosed = true
+        
         // Then in your createWindow function, replace the content view with:
         let contentView = KeyHandlingView(frame: rect)
         contentView.wantsLayer = true
@@ -153,7 +146,7 @@ public final class WindowManager {
         }
     }
     
-    func updateWindowPixels(windowID: UInt32, colors: UnsafePointer<Color>, width: Int, height: Int) {
+    func updateWindowPixels(windowID: UInt32, data: UnsafePointer<UInt8>, width: Int, height: Int) {
         guard let window = windows[windowID] else { return }
     
         var renderView: RenderView
@@ -171,7 +164,7 @@ public final class WindowManager {
         }
     
         // Update the pixels
-        renderView.updateFromColors(colors: colors, width: width, height: height)
+        renderView.updateFromRawPixels(pixels: data, width: width, height: height)
     }
 
 
@@ -179,11 +172,11 @@ public final class WindowManager {
 
 @MainActor
 @_cdecl("wb_updateWindowPixels")
-public func wb_updateWindowPixels(_ windowID: UInt32, _ colors: UnsafePointer<Color>, width: Int32, height: Int32) {
+public func wb_updateWindowPixels(_ windowID: UInt32, _ data: UnsafePointer<UInt8>, width: Int32, height: Int32) {
     if Thread.isMainThread {
         WindowManager.shared.updateWindowPixels(
             windowID: windowID,
-            colors: colors,
+            data: data,
             width: Int(width),
             height: Int(height),
         )
@@ -191,7 +184,7 @@ public func wb_updateWindowPixels(_ windowID: UInt32, _ colors: UnsafePointer<Co
         DispatchQueue.main.async {
             WindowManager.shared.updateWindowPixels(
                 windowID: windowID,
-                colors: colors,
+                data: data,
                 width: Int(width),
                 height: Int(height),
             )

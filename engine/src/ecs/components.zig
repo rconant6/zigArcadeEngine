@@ -1,5 +1,23 @@
-const rend = @import("renderer");
-const V2 = @import("math").V2;
+const ecs = @import("ecs.zig");
+const ShapeData = ecs.ShapeData;
+const Transform = ecs.Transform;
+const V2 = ecs.V2;
+
+pub const ComponentTag = enum {
+    Control,
+    Player,
+    Render,
+    Transform,
+    Velocity,
+};
+
+pub const ComponentType = union(ComponentTag) {
+    Control: ControlComp,
+    Player: PlayerComp,
+    Render: RenderComp,
+    Transform: TransformComp,
+    Velocity: VelocityComp,
+};
 
 pub const TextComp = struct {
     char: u8 = 0,
@@ -16,14 +34,14 @@ pub const ControlComp = struct {
 };
 
 pub const TransformComp = struct {
-    transform: rend.Transform,
+    transform: Transform,
 };
 
 pub const RenderComp = struct {
-    shapeData: rend.ShapeData,
+    shapeData: ShapeData,
     visible: bool,
 };
 
 pub const VelocityComp = struct {
-    velocity: V2 = V2.zero(),
+    velocity: V2 = V2.ZERO,
 };

@@ -4,12 +4,12 @@ const ecs = @import("ecs.zig");
 const Command = ecs.Command;
 const Entity = ecs.Entity;
 const EntityCommand = ecs.EntityCommand;
-const EntityConfig = ecs.EntityConfig;
 const EntityHandle = ecs.EntityHandle;
 const ComponentTag = ecs.ComponentTag;
 const ComponentType = ecs.ComponentType;
 const ControlComp = ecs.ControlComp;
 const ControlCompStorage = ecs.ControlCompStorage;
+const ControllableConfig = ecs.ControllableConfig;
 const PlayerComp = ecs.PlayerComp;
 const PlayerCompStorage = ecs.PlayerCompStorage;
 const Polygon = ecs.Polygon;
@@ -18,7 +18,8 @@ const TransformCompStorage = ecs.TransformCompStorage;
 const RenderComp = ecs.RenderComp;
 const RenderCompStorage = ecs.RenderCompStorage;
 const Renderer = ecs.Renderer;
-const ShapeData = ecs.rend.ShapeData;
+const ShapeConfig = ecs.ShapeConfig;
+const ShapeData = ecs.ShapeData;
 const InputManager = ecs.InputManager;
 const InputWrapper = ecs.InputWrapper;
 const VelocityComp = ecs.VelocityComp;
@@ -62,8 +63,8 @@ pub const EntityManager = struct {
     }
     pub fn addEntityWithConfigs(
         self: *EntityManager,
-        renderConfig: ?EntityConfig.ShapeConfigs,
-        controlConfig: ?EntityConfig.ControllableConfig,
+        renderConfig: ?ShapeConfig,
+        controlConfig: ?ControllableConfig,
     ) !EntityHandle {
         const entity = try self.createEntity();
         var tComp = false;
@@ -92,7 +93,7 @@ pub const EntityManager = struct {
         return error.ComponentAddtionFailed;
     }
 
-    pub fn addControllableEntity(self: *EntityManager, config: EntityConfig.ControllableConfig) !EntityHandle {
+    pub fn addControllableEntity(self: *EntityManager, config: ControllableConfig) !EntityHandle {
         const player = self.extractPlayer(config);
         const control = self.extractControl(config);
 
@@ -107,7 +108,7 @@ pub const EntityManager = struct {
         return error.ComponentAdditionFailed;
     }
 
-    pub fn addRenderableEntity(self: *EntityManager, config: EntityConfig.ShapeConfigs) !EntityHandle {
+    pub fn addRenderableEntity(self: *EntityManager, config: ShapeConfig) !EntityHandle {
         const entity = try self.createEntity();
         const transformComp = try switch (config) {
             inline else => |c| extractTransform(c),
@@ -251,7 +252,7 @@ pub const EntityManager = struct {
         self.freeIds.writeItemAssumeCapacity(entity.id);
     }
 
-    fn extractShape(self: *EntityManager, config: EntityConfig.ShapeConfigs) !ShapeData {
+    fn extractShape(self: *EntityManager, config: ShapeConfig) !ShapeData {
         return switch (config) {
             .Circle => |c| ShapeData{ .Circle = .{
                 .origin = c.origin,

@@ -7,7 +7,7 @@ pub fn gameToScreen(renderer: *const Renderer, p: Point) ScreenPoint {
     const x: i32 = @intFromFloat((p.x + 10.0) * 0.05 * renderer.fw);
     const y: i32 = @intFromFloat((10.0 - p.y) * 0.05 * renderer.fh);
 
-    return ScreenPoint.init(x, y);
+    return .{ .x = x, .y = y };
 }
 
 pub fn screenToGame(renderer: *const Renderer, sp: ScreenPoint) Point {

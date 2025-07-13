@@ -355,6 +355,7 @@ pub const Font = struct {
     pub fn init(alloc: *std.mem.Allocator, path: []const u8) !Font {
         var arena = std.heap.ArenaAllocator.init(alloc.*);
         defer arena.deinit();
+
         var tempAlloc = arena.allocator();
         var tableDirectory = std.AutoArrayHashMap(u32, TableEntry).init(tempAlloc);
 
