@@ -1,8 +1,8 @@
 const std = @import("std");
-const rTypes = @import("types.zig");
 
-const Point = rTypes.GamePoint;
-const Color = rTypes.Color;
+const rend = @import("renderer.zig");
+const Color = rend.Color;
+const Point = rend.GamePoint;
 
 /// Represents a line segment between two points in game space.
 ///

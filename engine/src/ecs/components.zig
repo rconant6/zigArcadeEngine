@@ -1,5 +1,5 @@
-const rend = @import("types.zig").rend;
-const V2 = @import("../math.zig").V2;
+const rend = @import("renderer");
+const V2 = @import("math").V2;
 
 pub const TextComp = struct {
     char: u8 = 0,

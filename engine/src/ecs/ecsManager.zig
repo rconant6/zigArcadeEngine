@@ -1,33 +1,31 @@
 const std = @import("std");
 
-const math = @import("../math.zig");
-const V2 = math.V2;
+const ecs = @import("ecs.zig");
+const Command = ecs.Command;
+const Entity = ecs.Entity;
+const EntityCommand = ecs.EntityCommand;
+const EntityConfig = ecs.EntityConfig;
+const EntityHandle = ecs.EntityHandle;
+const ComponentTag = ecs.ComponentTag;
+const ComponentType = ecs.ComponentType;
+const ControlComp = ecs.ControlComp;
+const ControlCompStorage = ecs.ControlCompStorage;
+const PlayerComp = ecs.PlayerComp;
+const PlayerCompStorage = ecs.PlayerCompStorage;
+const Polygon = ecs.Polygon;
+const TransformComp = ecs.TransformComp;
+const TransformCompStorage = ecs.TransformCompStorage;
+const RenderComp = ecs.RenderComp;
+const RenderCompStorage = ecs.RenderCompStorage;
+const Renderer = ecs.Renderer;
+const ShapeData = ecs.rend.ShapeData;
+const InputManager = ecs.InputManager;
+const InputWrapper = ecs.InputWrapper;
+const VelocityComp = ecs.VelocityComp;
+const VelocityCompStorage = ecs.VelocityCompStorage;
+const V2 = ecs.V2;
 
-const types = @import("types.zig");
-const Command = types.Command;
-const Entity = types.Entity;
-const EntityCommand = types.EntityCommand;
-const EntityConfig = types.EntityConfig;
-const EntityHandle = types.EntityHandle;
-const ComponentTag = types.ComponentTag;
-const ComponentType = types.ComponentType;
-const ControlComp = types.ControlComp;
-const ControlCompStorage = types.ControlCompStorage;
-const PlayerComp = types.PlayerComp;
-const PlayerCompStorage = types.PlayerCompStorage;
-const TransformComp = types.TransformComp;
-const TransformCompStorage = types.TransformCompStorage;
-const RenderComp = types.RenderComp;
-const RenderCompStorage = types.RenderCompStorage;
-const ShapeData = types.rend.ShapeData;
-const InputManager = types.InputManager;
-const InputWrapper = types.InputWrapper;
-const VelocityComp = types.VelocityComp;
-const VelocityCompStorage = types.VelocityCompStorage;
-
-const Renderer = types.rend.Renderer;
-
-const KeyEvent = @import("../bridge.zig").KeyEvent;
+const KeyEvent = @import("../bridge.zig").KeyEvent; // still tood from platform....
 
 pub const EntityManager = struct {
     counter: usize,
@@ -281,7 +279,7 @@ pub const EntityManager = struct {
             } },
             .Polygon => |p| {
                 if (p.vertices == null) return error.PolygonRequiresVertices;
-                var polygon = try types.rend.Polygon.init(self.arena.allocator(), p.vertices.?);
+                var polygon = try Polygon.init(self.arena.allocator(), p.vertices.?);
                 polygon.outlineColor = p.outlineColor;
                 polygon.fillColor = p.fillColor;
                 return ShapeData{ .Polygon = polygon };

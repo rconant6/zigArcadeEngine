@@ -1,6 +1,13 @@
 .gitignore
 CLAUDE.md
 game/scratch.zig
+zig-out/
+zig-cache/
+*/zig-out/
+*/zig-cache/
+.DS_Store
+Thumbs.db
+*/.DS_Store
 
 
 

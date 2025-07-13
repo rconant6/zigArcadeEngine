@@ -1,20 +1,18 @@
 const std = @import("std");
-const rTypes = @import("types.zig");
-const trans = @import("transformation.zig");
-const ecs = @import("ecs");
 
-const Circle = rTypes.Circle;
-const Color = rTypes.Color;
-const Ellipse = rTypes.Ellipse;
-const FrameBuffer = rTypes.FrameBuffer;
-const Line = rTypes.Line;
-const Point = rTypes.GamePoint;
-const Polygon = rTypes.Polygon;
-const Rectangle = rTypes.Rectangle;
-const ScreenPoint = rTypes.ScreenPoint;
-const ShapeData = rTypes.ShapeData;
-const Transform = rTypes.Transform;
-const Triangle = rTypes.Triangle;
+const rend = @import("renderer.zig");
+const Circle = rend.Circle;
+const Color = rend.Color;
+const Ellipse = rend.Ellipse;
+const FrameBuffer = rend.FrameBuffer;
+const Line = rend.Line;
+const Point = rend.GamePoint;
+const Polygon = rend.Polygon;
+const Rectangle = rend.Rectangle;
+const ScreenPoint = rend.ScreenPoint;
+const ShapeData = rend.ShapeData;
+const Transform = rend.Transform;
+const Triangle = rend.Triangle;
 
 pub const Renderer = struct {
     frameBuffer: FrameBuffer,
@@ -63,11 +61,11 @@ pub const Renderer = struct {
     }
 
     pub fn gameToScreen(self: *const Renderer, p: Point) ScreenPoint {
-        return trans.gameToScreen(self, p);
+        return rend.gameToScreen(self, p);
     }
 
     pub fn screenToGame(self: *const Renderer, sp: ScreenPoint) Point {
-        return trans.screenToGame(self, sp);
+        return rend.screenToGame(self, sp);
     }
 
     pub fn drawShape(

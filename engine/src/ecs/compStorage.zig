@@ -1,13 +1,14 @@
 const std = @import("std");
-const types = @import("types.zig");
 
-const ComponentType = types.ComponentType;
-const ControlComp = types.ControlComp;
-const PlayerComp = types.PlayerComp;
-const RenderComp = types.RenderComp;
-const TransformComp = types.TransformComp;
-const VelocityComp = types.VelocityComp;
+const ecs = @import("ecs.zig");
+const ComponentType = ecs.ComponentType;
+const ControlComp = ecs.ControlComp;
+const PlayerComp = ecs.PlayerComp;
+const RenderComp = ecs.RenderComp;
+const TransformComp = ecs.TransformComp;
+const VelocityComp = ecs.VelocityComp;
 
+// TODO: make the generic?
 pub const VelocityCompStorage = struct {
     data: std.ArrayList(VelocityComp),
     entityToIndex: std.AutoHashMap(usize, usize),

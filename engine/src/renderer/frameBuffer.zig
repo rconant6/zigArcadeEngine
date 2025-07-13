@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const Color = @import("color.zig").Color;
+const Color = @import("renderer.zig").Color;
 
 pub const FrameBuffer = struct {
     width: i32,

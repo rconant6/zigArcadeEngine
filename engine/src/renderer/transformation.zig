@@ -1,8 +1,7 @@
-const rTypes = @import("types.zig");
-
-const Point = rTypes.GamePoint;
-const Renderer = rTypes.Renderer;
-const ScreenPoint = rTypes.ScreenPoint;
+const rend = @import("renderer.zig");
+const Point = rend.GamePoint;
+const Renderer = rend.Renderer;
+const ScreenPoint = rend.ScreenPoint;
 
 pub fn gameToScreen(renderer: *const Renderer, p: Point) ScreenPoint {
     const x: i32 = @intFromFloat((p.x + 10.0) * 0.05 * renderer.fw);

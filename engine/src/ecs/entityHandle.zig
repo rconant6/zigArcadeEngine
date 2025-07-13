@@ -1,6 +1,6 @@
-const types = @import("types.zig");
-const Entity = types.Entity;
-const EntityManager = types.EntityManager;
+const ecs = @import("ecs.zig");
+const Entity = ecs.Entity;
+const EntityManager = ecs.EntityManager;
 
 pub const EntityHandle = struct {
     entity: Entity,

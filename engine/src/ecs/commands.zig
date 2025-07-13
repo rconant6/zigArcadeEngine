@@ -1,7 +1,7 @@
 const std = @import("std");
 
-const types = @import("types.zig");
-const Entity = types.Entity;
+const ecs = @import("ecs.zig");
+const Entity = ecs.Entity;
 
 pub const InputWrapper = struct {
     entity: Entity,
