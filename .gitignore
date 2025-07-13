@@ -11,4 +11,5 @@ Thumbs.db
 engine/src/platform/MacOS/.build/
 engine/src/platform/MacOS/.swiftpm/
 
+engine/src/platform/MacOS/.build/*
 

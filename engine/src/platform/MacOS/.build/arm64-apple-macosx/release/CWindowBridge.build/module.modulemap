@@ -1,4 +1,0 @@
-module CWindowBridge {
-    umbrella "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/Sources/CBridge/w/include"
-    export *
-}

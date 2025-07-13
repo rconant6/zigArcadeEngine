@@ -219,7 +219,6 @@ public func wb_initApplication() -> UInt8 {
         var success: UInt8 = 0
         let semaphore = DispatchSemaphore(value: 0)
 
-
         DispatchQueue.main.async {
             let app = NSApplication.shared
             app.setActivationPolicy(.regular)

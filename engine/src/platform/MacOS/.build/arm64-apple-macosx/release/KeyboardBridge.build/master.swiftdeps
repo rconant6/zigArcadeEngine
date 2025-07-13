@@ -1,6 +1,0 @@
-version: "Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)"
-options: "bbd07061f1f2c9347df6422d09048ea5c974a256cb4d95463d8c9c11f9f4fc16"
-build_start_time: [1752367347, 145378000]
-build_end_time: [1752367350, 780297000]
-inputs:
-  "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/Sources/SwiftBridge/kb/keyboardBridge.swift": [1745717231, 959139792]

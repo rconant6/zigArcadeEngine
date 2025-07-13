@@ -1,4 +1,0 @@
-module KeyboardBridge {
-    header "/Users/randy/Developer/zig/arcadeEngine/engine/src/platform/MacOS/.build/arm64-apple-macosx/release/KeyboardBridge.build/KeyboardBridge-Swift.h"
-    requires objc
-}
