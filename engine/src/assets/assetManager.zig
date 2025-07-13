@@ -1,8 +1,8 @@
 const std = @import("std");
 
-const types = @import("types.zig");
-const FontManager = types.FontManager;
-const Font = types.Font;
+const asset = @import("assets.zig");
+const FontManager = asset.FontManager;
+const Font = asset.Font;
 
 pub const AssetManager = struct {
     allocator: *std.mem.Allocator,

@@ -1,4 +1,4 @@
-const V2 = @import("../math.zig").V2;
+const V2 = @import("assets.zig").V2;
 
 // # TrueType File Structure (Top-Down)
 // ## Font Directory Header (File Start)

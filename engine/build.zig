@@ -13,6 +13,9 @@ pub fn build(b: *std.Build) void {
     const ecsModule = b.addModule("ecs", .{
         .root_source_file = b.path("src/ecs/ecs.zig"),
     });
+    const assetModule = b.addModule("asset", .{
+        .root_source_file = b.path("src/assets/assets.zig"),
+    });
 
     const engine = b.addStaticLibrary(.{
         .name = "engine",
@@ -25,6 +28,9 @@ pub fn build(b: *std.Build) void {
 
     rendererModule.addImport("math", mathModule);
     engine.root_module.addImport("renderer", rendererModule);
+
+    assetModule.addImport("math", mathModule);
+    engine.root_module.addImport("asset", assetModule);
 
     ecsModule.addImport("math", mathModule);
     ecsModule.addImport("renderer", rendererModule);
