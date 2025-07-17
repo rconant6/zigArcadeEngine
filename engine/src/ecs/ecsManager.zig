@@ -20,8 +20,6 @@ const RenderCompStorage = ecs.RenderCompStorage;
 const Renderer = ecs.Renderer;
 const ShapeConfig = ecs.ShapeConfig;
 const ShapeData = ecs.ShapeData;
-const InputManager = ecs.InputManager;
-const InputWrapper = ecs.InputWrapper;
 const VelocityComp = ecs.VelocityComp;
 const VelocityCompStorage = ecs.VelocityCompStorage;
 const V2 = ecs.V2;
@@ -138,32 +136,32 @@ pub const EntityManager = struct {
         }
     }
 
-    fn generateCommands(self: *EntityManager, inputManager: *InputManager, dt: f32) void {
-        var count: usize = 0;
-        var controllables: [5]InputWrapper = undefined;
+    // fn generateCommands(self: *EntityManager, inputManager: *InputManager, dt: f32) void {
+    //     var count: usize = 0;
+    //     var controllables: [5]InputWrapper = undefined;
 
-        for (self.player.indexToEntity.items) |entityID| {
-            if (self.control.entityToIndex.get(entityID)) |entity| {
-                const control = self.control.data.items[entity];
-                const rotRate = control.rotationRate orelse 0;
-                const thrustForce = control.thrustForce orelse 0;
-                if (rotRate != 0 or thrustForce != 0) {
-                    controllables[count] = InputWrapper{
-                        .entity = Entity.init(entityID, self.generations.items[entityID]),
-                        .rotationRate = rotRate,
-                        .thrustForce = thrustForce,
-                    };
-                    count += 1;
-                }
-            }
-        }
+    //     for (self.player.indexToEntity.items) |entityID| {
+    //         if (self.control.entityToIndex.get(entityID)) |entity| {
+    //             const control = self.control.data.items[entity];
+    //             const rotRate = control.rotationRate orelse 0;
+    //             const thrustForce = control.thrustForce orelse 0;
+    //             if (rotRate != 0 or thrustForce != 0) {
+    //                 controllables[count] = InputWrapper{
+    //                     .entity = Entity.init(entityID, self.generations.items[entityID]),
+    //                     .rotationRate = rotRate,
+    //                     .thrustForce = thrustForce,
+    //                 };
+    //                 count += 1;
+    //             }
+    //         }
+    //     }
 
-        inputManager.generateCommands(
-            controllables[0..count],
-            dt,
-            &self.commandQueue,
-        );
-    }
+    //     inputManager.generateCommands(
+    //         controllables[0..count],
+    //         dt,
+    //         &self.commandQueue,
+    //     );
+    // }
 
     fn processCommands(self: *EntityManager) void {
         for (self.commandQueue.items) |command| {
@@ -497,10 +495,10 @@ pub const EntityManager = struct {
         }
     }
 
-    pub fn inputSystem(self: *EntityManager, inputManager: *InputManager, dt: f32) void {
-        self.generateCommands(inputManager, dt);
-        self.processCommands();
-    }
+    // pub fn inputSystem(self: *EntityManager, inputManager: *InputManager, dt: f32) void {
+    //     self.generateCommands(inputManager, dt);
+    //     self.processCommands();
+    // }
 
     pub fn physicsSystem(self: *EntityManager, dt: f32) void {
         for (self.velocity.indexToEntity.items, 0..) |entityID, velocityIndex| {

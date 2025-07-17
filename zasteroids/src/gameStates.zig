@@ -1,10 +1,26 @@
 const std = @import("std");
 
-const bge = @import("bridge.zig");
-const GameStateContext = bge.GameStateContext;
-const KeyCodes = bge.GameKeyCode;
-const KeyEvent = bge.KeyEvent;
-const StateTransitions = bge.StateTransitions;
+const plat = @import("platform");
+const KeyCodes = plat.GameKeyCode;
+const KeyEvent = plat.KeyEvent;
+
+// MARK: GameState bridging
+pub const GameStateContext = struct {
+    // hold what needs to be passed to start a stage
+    // this probably collects alot of optional stuff
+    // that each GameState will copy/set in its enter function
+    // exit can take a pointer to update it
+};
+
+pub const StateTransitions = enum {
+    MenuToPlay,
+    PauseToPlay,
+    PauseToMenu,
+    PlayToMenu,
+    PlayToPause,
+    PlayToGameOver,
+    GameOverToMenu,
+};
 
 pub const MenuState = struct {
     // game gets setup and waits for game start

@@ -20,7 +20,7 @@ fn loadFile(alloc: std.mem.Allocator, path: []const u8) ![]const u8 {
     var exeBuffer: [std.fs.max_path_bytes]u8 = undefined;
 
     const cwd = try std.process.getCwd(&exeBuffer);
-    const joinedPath = try std.fmt.bufPrint(&pathBuffer, "{s}/zig-out/bin/resources/{s}", .{ cwd, path });
+    const joinedPath = try std.fmt.bufPrint(&pathBuffer, "{s}/zig-out/bin/{s}", .{ cwd, path });
 
     const file = try std.fs.openFileAbsolute(joinedPath, .{});
     defer file.close();
