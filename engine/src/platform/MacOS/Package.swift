@@ -7,7 +7,7 @@ let package = Package(
         .library(
             name: "macOSBridge", 
             type: .dynamic, 
-            targets: ["KeyboardBridge", "WindowBridge"],
+            targets: ["KeyboardBridge", "WindowBridge", "MouseBridge"],
         ),
     ],
 
@@ -15,7 +15,7 @@ let package = Package(
         .target(
             name: "CKeyboardBridge",
             path: "Sources/CBridge/kb",
-            publicHeadersPath: "include/",
+			publicHeadersPath: "include/",
         ),
         .target(
             name: "KeyboardBridge",
@@ -31,6 +31,16 @@ let package = Package(
             name: "WindowBridge",
             dependencies: ["CWindowBridge"],
             path: "Sources/SwiftBridge/w",
-        ),    
+        ),
+		.target(
+			name: "CMouseBridge",
+			path: "Sources/CBridge/mouse",
+			publicHeadersPath: "include/",
+		),
+		.target(
+			name: "MouseBridge",
+			dependencies: ["CMouseBridge"],
+			path: "Sources/SwiftBridge/mouse",
+		),
     ]
 )

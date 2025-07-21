@@ -6,15 +6,23 @@ const c = plat.c;
 
 pub const Mouse = struct {
     pub fn init() !Mouse {
-        std.debug.print("[MOUSE] - init\n", .{});
-        // TODO: Initialize mouse monitoring
+        // std.debug.print("[MOUSE] - init\n", .{});
+        // if (c.m_startMouseMonitoring() == 0) {
+        //     return error.MouseMonitoringFailed;
+        // }
+
+        const result = c.m_startMouseMonitoring();
+        std.debug.print("[MOUSE] - C function returned: {}\n", .{result});
+        if (result == 0) {
+            return error.MouseMonitoringFailed;
+        }
         return Mouse{};
     }
 
     pub fn deinit(self: *Mouse) void {
         std.debug.print("[MOUSE] - deinit\n", .{});
         _ = self;
-        // TODO: Cleanup mouse monitoring
+        c.m_stopMouseMonitoring();
     }
 
     pub fn pollEvent(self: *Mouse) ?MouseEvent {

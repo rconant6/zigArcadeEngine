@@ -31,8 +31,8 @@ public final class KeyboardMonitor {
 
     func isKeyPressed(_ keyCode: UInt8) -> Bool {
         queueLock.lock()
+        defer {queueLock.unlock()}
         let isPressed = pressedKeys.contains(keyCode)
-        queueLock.unlock()
         
         return isPressed
     }

@@ -4,12 +4,14 @@ const plat = @import("platform");
 const InputHandler = plat.InputHandler;
 const InputEvent = plat.InputEvent;
 const Keyboard = plat.Keyboard;
+const Mouse = plat.Mouse;
 const Window = plat.Window;
+const c = plat.c;
 
 const rend = @import("renderer");
-const Renderer = rend.Renderer;
 const Colors = rend.Colors;
 const Point = rend.GamePoint;
+const Renderer = rend.Renderer;
 
 const ecs = @import("ecs");
 const EntityManager = ecs.EntityManager;
@@ -59,6 +61,16 @@ pub fn main() !void {
     };
     defer keyboard.deinit();
 
+    // Initialize mouse
+    var mouse = Mouse.init() catch |err| {
+        std.process.fatal(
+            "[MAIN] failed to initialize mouse input: {}\n",
+            .{err},
+        );
+    };
+    testMouseBridgeLinks();
+    defer mouse.deinit();
+
     var inputHandler = InputHandler.init();
 
     var entityManager = EntityManager.init(&allocator) catch |err| {
@@ -92,8 +104,8 @@ pub fn main() !void {
     var font = try assetManager.loadFont(fontName);
     std.debug.print("[MAIN] loaded {s} font\n", .{fontName});
 
-    const c = 'E';
-    if (font.charToGlyph.get(c)) |glyphIndex| {
+    const char = 'E';
+    if (font.charToGlyph.get(char)) |glyphIndex| {
         if (font.glyphShapes.get(glyphIndex)) |glyph| {
             const firstContourEnd = glyph.contourEnds[0];
             const firstContourPoints = glyph.points[0 .. firstContourEnd + 1];
@@ -189,4 +201,60 @@ pub fn main() !void {
             std.debug.print("Missed frametime by: {d}\n", .{sleepTimeUs});
         }
     }
+}
+
+pub fn testMouseBridgeLinks() void {
+    std.debug.print("[MOUSE TEST] Testing all C bridge functions...\n", .{});
+
+    // Basic lifecycle
+    _ = c.m_startMouseMonitoring();
+    c.m_stopMouseMonitoring();
+
+    // Event polling
+    var batch: c.mMouseEventBatch = undefined;
+    _ = c.m_pollMouseEventBatch(&batch);
+    _ = c.m_hasMouseEvents();
+    c.m_clearMouseEvents();
+
+    // State queries
+    var state: c.mMouseState = undefined;
+    _ = c.m_getMouseState(&state);
+    _ = c.m_isButtonPressed(c.M_BUTTON_LEFT);
+
+    var gameX: f32 = undefined;
+    var gameY: f32 = undefined;
+    _ = c.m_getMousePosition(&gameX, &gameY);
+
+    // Gesture queries
+    _ = c.m_wasButtonClicked(c.M_BUTTON_LEFT);
+    _ = c.m_wasButtonDoubleClicked(c.M_BUTTON_LEFT);
+
+    var deltaX: f32 = undefined;
+    var deltaY: f32 = undefined;
+    _ = c.m_getMouseDelta(&deltaX, &deltaY);
+
+    var scrollX: f32 = undefined;
+    var scrollY: f32 = undefined;
+    _ = c.m_getScrollData(&scrollX, &scrollY);
+
+    // Configuration
+    c.m_setWindowDimensions(800, 600);
+    c.m_setDoubleClickTime(500);
+    c.m_setMouseSensitivity(1.0);
+
+    // Test enum values compile
+    _ = c.M_BUTTON_PRESS;
+    _ = c.M_BUTTON_RELEASE;
+    _ = c.M_MOVE;
+    _ = c.M_SCROLL;
+    _ = c.M_ENTER_WINDOW;
+    _ = c.M_EXIT_WINDOW;
+
+    _ = c.M_BUTTON_LEFT;
+    _ = c.M_BUTTON_RIGHT;
+    _ = c.M_BUTTON_MIDDLE;
+    _ = c.M_BUTTON_EXTRA1;
+    _ = c.M_BUTTON_EXTRA2;
+
+    std.debug.print("[MOUSE TEST] All functions linked successfully!\n", .{});
 }
