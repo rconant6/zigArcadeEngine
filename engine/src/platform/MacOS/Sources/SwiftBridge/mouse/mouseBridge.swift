@@ -76,7 +76,6 @@ public final class MouseMonitor {
     }
     globalMonitor = localMonitor
 
-    print("MACOS-MOUSE] - monitor initialized: \(globalMonitor != nil)")
     return globalMonitor != nil
   }
 
@@ -97,7 +96,6 @@ public final class MouseMonitor {
 
     let eventCount: Int32 = min(Int32(eventQueue.count), MAX_MOUSE_EVENTS_PER_FRAME)
 
-
     withUnsafeMutableBytes(of: &outBatch.pointee.events) { rawBuffer in
       for i in 0..<eventCount {
         let eventPtr = rawBuffer.baseAddress!.advanced(by: Int(i) * MemoryLayout<mMouseEvent>.size)
@@ -110,7 +108,7 @@ public final class MouseMonitor {
 
     eventQueue.removeFirst(Int(eventCount))
 
-    return 0
+    return eventCount > 0 ? 1 : 0
   }
 
   func setDimensions(_ width: Int, _ height: Int) {
@@ -179,7 +177,7 @@ public func m_pollMouseEventBatch(_ outBatch: UnsafeMutablePointer<mMouseEventBa
 }
 
 // void m_setWindowDimensions(int width, int height);
-@available(macOS 15.0, *)
+// @available(macOS 15.0, *)
 @_cdecl("m_setWindowDimensions")
 public func m_setWindowDimensions(_ width: Int, _ height: Int) {
   MouseMonitor.shared.setDimensions(width, height)

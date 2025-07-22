@@ -68,10 +68,10 @@ pub fn main() !void {
             .{err},
         );
     };
-    mouse.setScreenCoords(Config.WIDTH, Config.HEIGHT);
+    mouse.setWindowDimensions(Config.WIDTH, Config.HEIGHT);
     defer mouse.deinit();
 
-    var inputHandler = InputHandler.init();
+    // var inputHandler = InputHandler.init();
 
     var entityManager = EntityManager.init(&allocator) catch |err| {
         std.process.fatal("[MAIN] failed to initialize entity manager: {}\n", .{err});
@@ -169,29 +169,39 @@ pub fn main() !void {
                 std.debug.print("[MAIN] shutting down\n", .{});
                 running = false;
             } else {
-                std.debug.print("InputState: {any} for key: {any}\n", .{ inputHandler.getKeyState(keyEvent.keyCode), keyEvent.keyCode });
-                // std.debug.print("[MAIN] KeyCode: {any}\n", .{keyEvent.keyCode});
-                inputHandler.processInputEvent(InputEvent{ .key = keyEvent });
+                // std.debug.print("InputState: {any} for key: {any}\n", .{ inputHandler.getKeyState(keyEvent.keyCode), keyEvent.keyCode });
+                std.debug.print("[MAIN] KeyCode: {any}\n", .{keyEvent.keyCode});
+                // inputHandler.processInputEvent(InputEvent{ .key = keyEvent });
             }
         }
 
-        while (mouse.pollEvent()) |mouseEvent| {
-            // std.debug.print("InputState: {any} for mouse: {any}\n", .{ inputHandler.keyJustReleased(mouseEvent.button), mouseEvent.button });
-            std.debug.print("[MAIN] MouseCode: {any}\n", .{mouseEvent.button});
-            // inputHandler.processInputEvent(InputEvent{ .key = keyEvent });
+        // while (mouse.pollEvent()) |mouseEvent| {
+        // std.debug.print("InputState: {any} for mouse: {any}\n", .{ inputHandler.keyJustReleased(mouseEvent.button), mouseEvent.button });
+        // std.debug.print("[MAIN] MouseCode: {any}\n", .{mouseEvent.button});
+        // inputHandler.processInputEvent(InputEvent{ .key = keyEvent });
+        // }
+        //
+        _ = mouse.pollEvents();
+        mouse.processEvents();
+        if (mouse.isButtonPressed(.Left)) {
+            std.debug.print("Left mouse button click\n", .{});
+        }
+        if (mouse.wasButtonJustPressed(.Left)) {
+            std.debug.print("Left mouse button just clicked\n", .{});
         }
 
         renderer.beginFrame();
         entityManager.renderSystem(&renderer);
         renderer.endFrame();
 
+        mouse.update(dt);
         const rawBytes: []u8 = std.mem.sliceAsBytes(renderer.frameBuffer.frontBuffer);
         window.updateWindowPixels(
             rawBytes,
             Config.WIDTH,
             Config.HEIGHT,
         );
-        inputHandler.update(dt);
+        // inputHandler.update(dt);
         // Bottom of loop - timing calculation
         const currentTime = std.time.microTimestamp();
         const frameDurationUs = currentTime - lastTime;

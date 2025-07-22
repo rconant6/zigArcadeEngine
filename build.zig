@@ -53,11 +53,11 @@ pub fn build(b: *std.Build) void {
         },
     }
 
-    const platformModule = b.addModule("platform", .{
-        .root_source_file = b.path("engine/src/platform/platform.zig"),
-    });
     const mathModule = b.addModule("math", .{
         .root_source_file = b.path("engine/src/math/math.zig"),
+    });
+    const platformModule = b.addModule("platform", .{
+        .root_source_file = b.path("engine/src/platform/platform.zig"),
     });
     const rendererModule = b.addModule("renderer", .{
         .root_source_file = b.path("engine/src/renderer/renderer.zig"),
@@ -71,6 +71,7 @@ pub fn build(b: *std.Build) void {
 
     engine.root_module.addImport("math", mathModule);
 
+    platformModule.addImport("math", mathModule);
     engine.root_module.addImport("platform", platformModule);
 
     rendererModule.addImport("math", mathModule);

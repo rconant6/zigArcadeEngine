@@ -56,7 +56,7 @@ mBool m_startMouseMonitoring(void);
 void m_stopMouseMonitoring(void);
 mBool m_pollMouseEventBatch(mMouseEventBatch *outBatch);
 
-void m_setWindowDimensions(int width, int height);
+void m_setWindowDimensions(i32 width, i32 height);
 
 #ifdef __cplusplus
 }
