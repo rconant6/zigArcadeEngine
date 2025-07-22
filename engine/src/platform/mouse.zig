@@ -30,6 +30,11 @@ pub const Mouse = struct {
         // TODO: Poll for mouse events from C bridge
         return null;
     }
+
+    pub fn setScreenCoords(self: *Mouse, width: i32, height: i32) void {
+        _ = self;
+        c.m_setWindowDimensions(width, height);
+    }
 };
 
 pub const MouseEvent = struct {
