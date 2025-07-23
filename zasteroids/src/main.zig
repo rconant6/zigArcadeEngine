@@ -161,39 +161,39 @@ pub fn main() !void {
             running = false;
             continue;
         }
-
-        // Check for keyboard input
-        while (keyboard.pollEvent()) |keyEvent| {
-            // temporary quitting
-            if (keyEvent.keyCode == .Esc) {
-                std.debug.print("[MAIN] shutting down\n", .{});
-                running = false;
-            } else {
-                // std.debug.print("InputState: {any} for key: {any}\n", .{ inputHandler.getKeyState(keyEvent.keyCode), keyEvent.keyCode });
-                std.debug.print("[MAIN] KeyCode: {any}\n", .{keyEvent.keyCode});
-                // inputHandler.processInputEvent(InputEvent{ .key = keyEvent });
-            }
+        _ = keyboard.pollEvents();
+        keyboard.processEvents();
+        if (keyboard.isKeyPressed(.Esc)) running = false;
+        if (keyboard.isCommandPressed()) {
+            std.debug.print("Command Modifier! {any}\n", .{keyboard.state.modifiers});
         }
 
-        // while (mouse.pollEvent()) |mouseEvent| {
-        // std.debug.print("InputState: {any} for mouse: {any}\n", .{ inputHandler.keyJustReleased(mouseEvent.button), mouseEvent.button });
-        // std.debug.print("[MAIN] MouseCode: {any}\n", .{mouseEvent.button});
-        // inputHandler.processInputEvent(InputEvent{ .key = keyEvent });
-        // }
-        //
+        // const mouseEventCount = mouse.pollEvents();
+        // std.debug.print("Mouse events received: {}\n", .{mouseEventCount});
+        // mouse.processEvents();
         _ = mouse.pollEvents();
         mouse.processEvents();
+        // Add this right after processEvents():
+        // std.debug.print("Current mouse state - Left pressed: {}, Just pressed: {}\n", .{ mouse.state.buttonsPressed.left, mouse.state.buttonsJustPressed.left }); // _ = mouse.pollEvents();
+        // mouse.processEvents();
         if (mouse.isButtonPressed(.Left)) {
             std.debug.print("Left mouse button click\n", .{});
         }
         if (mouse.wasButtonJustPressed(.Left)) {
             std.debug.print("Left mouse button just clicked\n", .{});
         }
+        if (mouse.isButtonPressed(.Right)) {
+            std.debug.print("Right mouse button click\n", .{});
+        }
+        if (mouse.wasButtonJustPressed(.Right)) {
+            std.debug.print("Right mouse button just clicked\n", .{});
+        }
 
         renderer.beginFrame();
         entityManager.renderSystem(&renderer);
         renderer.endFrame();
 
+        keyboard.update(dt);
         mouse.update(dt);
         const rawBytes: []u8 = std.mem.sliceAsBytes(renderer.frameBuffer.frontBuffer);
         window.updateWindowPixels(

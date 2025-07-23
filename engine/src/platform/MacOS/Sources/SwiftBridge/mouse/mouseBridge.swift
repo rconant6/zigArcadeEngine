@@ -1,6 +1,7 @@
 import CMouseBridge
 import Cocoa
 
+
 public final class MouseMonitor {
   static let shared = MouseMonitor()
 
@@ -91,6 +92,7 @@ public final class MouseMonitor {
   }
 
   func pollMouseEventBatch(_ outBatch: UnsafeMutablePointer<mMouseEventBatch>) -> UInt8 {
+let MAX_MOUSE_EVENTS_PER_FRAME: Int32 = 8
     queueLock.lock()
     defer { queueLock.unlock() }
 

@@ -4,44 +4,153 @@ const builtin = @import("builtin");
 pub const plat = @import("platform.zig");
 const c = plat.c;
 
-pub const Keyboard = struct {
-    pub fn init() !Keyboard {
-        std.debug.print("[KEYBOARD] - init\n", .{});
-        if (c.kb_startKeyboardMonitoring() == 0) {
-            return error.KeyboardMonitoringFailed;
-        }
-        return Keyboard{};
-    }
+const MAX_KEYS = 256;
+pub const ModifierFlags = packed struct {
+    shift: u1 = 0,
+    control: u1 = 0,
+    option: u1 = 0,
+    command: u1 = 0,
+    padding: u4 = 0,
+};
 
-    pub fn deinit(self: *Keyboard) void {
-        std.debug.print("[KEYBOARD] - deinit\n", .{});
+pub const KeyboardState = struct {
+    keysPressed: [MAX_KEYS]bool,
+    keysJustPressed: [MAX_KEYS]bool,
+    keysJustReleased: [MAX_KEYS]bool,
+    modifiers: ModifierFlags,
+    lastUpdateTime: u64,
+};
+
+pub const Keyboard = struct {
+    state: KeyboardState,
+    batchData: c.kbEventBatch,
+
+    pub fn startMonitoring(self: *const Keyboard) bool {
+        _ = self;
+        return c.kb_startKeyboardMonitoring() == 1;
+    }
+    pub fn stopMonitoring(self: *const Keyboard) void {
         _ = self;
         c.kb_stopKeyboardMonitoring();
     }
 
-    pub fn pollEvent(self: *Keyboard) ?KeyEvent {
-        _ = self;
-        var c_event: c.kbKeyEvent = undefined;
-        if (c.kb_pollKeyboardEvent(&c_event) != 0) {
-            return KeyEvent.fromC(c_event);
-        }
-        return null;
+    pub fn pollEvents(self: *Keyboard) u8 {
+        return c.kb_pollKeyboardEventBatch(&self.batchData);
     }
-};
 
-pub const KeyEvent = struct {
-    keyCode: KeyCode,
-    isPressed: bool,
-    timestamp: u64,
+    pub fn processEvents(self: *Keyboard) void {
+        const eventCount: usize = @intCast(self.batchData.eventCount);
 
-    // Convert from C struct
-    pub fn fromC(c_event: c.kbKeyEvent) KeyEvent {
-        const keyCode = mapToGameKeyCode(c_event.code);
-        return KeyEvent{
-            .keyCode = keyCode,
-            .isPressed = c_event.isPressed != 0,
-            .timestamp = c_event.timestamp,
+        for (self.batchData.events[0..eventCount]) |cEvent| {
+            const index: usize = @intCast(@intFromEnum(mapToGameKeyCode(cEvent.code)));
+
+            self.state.modifiers = @bitCast(cEvent.modifiers);
+
+            std.debug.print("Raw modifier byte: 0b{b:0>8}\n", .{cEvent.modifiers});
+            std.debug.print("Parsed modifiers: shift={} ctrl={} opt={} cmd={}\n", .{
+                self.state.modifiers.shift,
+                self.state.modifiers.control,
+                self.state.modifiers.option,
+                self.state.modifiers.command,
+            });
+            switch (cEvent.eventType) {
+                c.KB_KEY_PRESS => {
+                    updateKeyPress(
+                        &self.state.keysPressed[index],
+                        &self.state.keysJustPressed[index],
+                        &self.state.keysJustReleased[index],
+                    );
+                    std.debug.print("Key Pressed:{any}  Index: {d}   Pressed: {any} Just Pressed: {any}, JustReleased: {any}\n", .{
+                        mapToGameKeyCode(cEvent.code),
+                        index,
+                        self.state.keysPressed[index],
+                        self.state.keysJustPressed[index],
+                        self.state.keysJustReleased[index],
+                    });
+                },
+                c.KB_KEY_RELEASE => {
+                    updateKeyRelease(
+                        &self.state.keysPressed[index],
+                        &self.state.keysJustPressed[index],
+                        &self.state.keysJustReleased[index],
+                    );
+                    std.debug.print("Key Released:{any}  Index: {d}   Pressed: {any} Just Pressed: {any}, JustReleased: {any}\n", .{
+                        mapToGameKeyCode(cEvent.code),
+                        index,
+                        self.state.keysPressed[index],
+                        self.state.keysJustPressed[index],
+                        self.state.keysJustReleased[index],
+                    });
+                },
+                else => {},
+            }
+        }
+    }
+
+    pub fn isKeyPressed(self: *const Keyboard, key: KeyCode) bool {
+        return self.state.keysPressed[@intFromEnum(key)];
+    }
+    pub fn wasKeyJustPressed(self: *const Keyboard, key: KeyCode) bool {
+        return self.state.keysJustPressed[@intFromEnum(key)];
+    }
+    pub fn wasKeyJustReleased(self: *const Keyboard, key: KeyCode) bool {
+        return self.state.keysJustReleased[@intFromEnum(key)];
+    }
+
+    pub fn isShiftPressed(self: *const Keyboard) bool {
+        return self.state.modifiers.shift == 1;
+    }
+    pub fn isCtrlPressed(self: *const Keyboard) bool {
+        return self.state.modifiers.control == 1;
+    }
+    pub fn isOptionPressed(self: *const Keyboard) bool {
+        return self.state.modifiers.option == 1;
+    }
+    pub fn isCommandPressed(self: *const Keyboard) bool {
+        return self.state.modifiers.command == 1;
+    }
+
+    fn updateKeyPress(pressed: *bool, justPressed: *bool, justReleased: *bool) void {
+        justPressed.* = !pressed.*;
+        pressed.* = true;
+        justReleased.* = false;
+    }
+
+    fn updateKeyRelease(pressed: *bool, justPressed: *bool, justReleased: *bool) void {
+        justReleased.* = pressed.*;
+        pressed.* = false;
+        justPressed.* = false;
+    }
+
+    pub fn update(self: *Keyboard, dt: f32) void {
+        _ = dt; // unused for now
+
+        for (&self.state.keysJustPressed) |*just| {
+            just.* = false;
+        }
+        for (&self.state.keysJustReleased) |*just| {
+            just.* = false;
+        }
+    }
+
+    pub fn init() !Keyboard {
+        const keyboard = Keyboard{
+            .state = KeyboardState{
+                .keysPressed = .{false} ** MAX_KEYS,
+                .keysJustPressed = .{false} ** MAX_KEYS,
+                .keysJustReleased = .{false} ** MAX_KEYS,
+                .modifiers = ModifierFlags{},
+                .lastUpdateTime = 0,
+            },
+            .batchData = c.kbEventBatch{},
         };
+        if (!keyboard.startMonitoring()) return error.KeyboardMonitoringFailed;
+
+        return keyboard;
+    }
+
+    pub fn deinit(self: *Keyboard) void {
+        self.stopMonitoring();
     }
 };
 

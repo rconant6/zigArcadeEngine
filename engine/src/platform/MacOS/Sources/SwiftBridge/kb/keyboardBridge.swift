@@ -1,147 +1,126 @@
-import Cocoa
 import CKeyboardBridge
+import Cocoa
 
-@MainActor
 public final class KeyboardMonitor {
-    static var shared = KeyboardMonitor()
+  static let shared = KeyboardMonitor()
 
-    private var eventQueue: [kbKeyEvent] = []
-    private let queueLock = NSLock()
-    private var globalMonitor: Any? = nil
-    private var pressedKeys = Set<UInt8>()
+  private var eventQueue: [kbKeyEvent] = []
+  private let queueLock = NSLock()
 
-    private init() {}
-    
-    func processKeyEvent(_ event: NSEvent) {
-        // print("[MACOS-KB] - Processing event: keyCode=\(event.keyCode), type=\(event.type)")
-    
-        let keyEvent = kbKeyEvent(
-         code: UInt8(event.keyCode),
-         isPressed: event.type == .keyDown ? 1 : 0,
-         timestamp: UInt64(event.timestamp * 1000)
-        )
-    
-        queueLock.lock()
-        defer { queueLock.unlock() }
-    
-        // print("[MACOS-KB] - Adding event to queue, current size: \(eventQueue.count)")
-        eventQueue.append(keyEvent)
-        // print("[MACOS-KB] - Queue size after adding: \(eventQueue.count)")
-    }
+  private var globalMonitor: Any? = nil
 
-    func isKeyPressed(_ keyCode: UInt8) -> Bool {
-        queueLock.lock()
-        defer {queueLock.unlock()}
-        let isPressed = pressedKeys.contains(keyCode)
-        
-        return isPressed
-    }
+  private init() {}
 
-    func pollEvent() -> (kbKeyEvent?, Bool) {
-        queueLock.lock()
-        defer { queueLock.unlock() }
-        
-        if eventQueue.isEmpty {
-            return (nil, false)
-        }
-        
-        // Get the next event and remove it from the queue
-        let event = eventQueue.removeFirst()
-        return (event, true)
-    }
-    
-    func stopMonitoring() {
-        if let monitor = globalMonitor {
-            NSEvent.removeMonitor(monitor)
-            globalMonitor = nil
-        }
-        
-        // Clear the queue
-        queueLock.lock()
-        eventQueue.removeAll()
-        pressedKeys.removeAll()
-        queueLock.unlock()
-    }
+  private func processKeyEvent(_ event: NSEvent) {
+    let kbType: kbEventType = event.type == .keyDown ? KB_KEY_PRESS : KB_KEY_RELEASE
+    let keyEvent = createKeyEvent(type: kbType, event: event)
 
-    func startMonitoring() -> Bool {
-    // print("[MACOS-KB] - start monitor")
-    // Already running
-    if globalMonitor != nil {
-        return true
-    }
-    
-    // Create event mask for keyboard events
-    let eventMask: NSEvent.EventTypeMask = [.keyDown, .keyUp]
-    
-    // Set up the local monitor (events from your app)
+    queueLock.lock()
+    eventQueue.append(keyEvent)
+    queueLock.unlock()
+  }
+
+  private func createKeyEvent(type: kbEventType, event: NSEvent) -> kbKeyEvent {
+    let fTimestamp = kbTime(event.timestamp * 1000.0)
+    let modifiers = event.modifierFlags
+    var compactMods: UInt8 = 0
+
+    if modifiers.contains(.shift) { compactMods |= 0x1 }
+    if modifiers.contains(.control) { compactMods |= 0x2 }
+    if modifiers.contains(.option) { compactMods |= 0x4 }
+    if modifiers.contains(.command) { compactMods |= 0x8 }
+
+    return kbKeyEvent(
+      eventType: type,
+      timestamp: fTimestamp,
+      code: UInt8(event.keyCode),
+      modifiers: compactMods,
+    )
+  }
+
+  func startMonitoring() -> Bool {
+    if globalMonitor != nil { return true }
+
+    let eventMask: NSEvent.EventTypeMask = [
+      .keyDown, .keyUp,
+    ]
+
     let localMonitor = NSEvent.addLocalMonitorForEvents(matching: eventMask) { [weak self] event in
-        // print("[MACOS-KB] - Local event captured: keyCode=\(event.keyCode)")
-        self?.processKeyEvent(event)
-        return event
+      self?.processKeyEvent(event)
+      return event
     }
-    
-    // Store the local monitor in the globalMonitor property
     globalMonitor = localMonitor
-    
-    print("[MACOS-KB] - monitor initialized: \(globalMonitor != nil)")
+
     return globalMonitor != nil
+  }
+
+  func stopMonitoring() {
+    if let monitor = globalMonitor {
+      NSEvent.removeMonitor(monitor)
+      globalMonitor = nil
+    }
+
+    queueLock.lock()
+    defer { queueLock.unlock() }
+    eventQueue.removeAll()
+  }
+
+  func pollKeyboardEventBatch(_ outBatch: UnsafeMutablePointer<kbEventBatch>) -> UInt8 {
+    queueLock.lock()
+    defer { queueLock.unlock() }
+
+    let eventCount: Int32 = min(Int32(eventQueue.count), MAX_KB_EVENTS_PER_FRAME)
+
+    withUnsafeMutableBytes(of: &outBatch.pointee.events) { rawBuffer in
+      for i in 0..<eventCount {
+        let eventPtr = rawBuffer.baseAddress!.advanced(by: Int(i) * MemoryLayout<kbKeyEvent>.size)
+        eventPtr.copyMemory(from: &eventQueue[Int(i)], byteCount: MemoryLayout<kbKeyEvent>.size)
+      }
+    }
+
+    outBatch.pointee.eventCount = eventCount
+    outBatch.pointee.overflow = eventQueue.count > Int(MAX_KB_EVENTS_PER_FRAME) ? 1 : 0
+
+    eventQueue.removeFirst(Int(eventCount))
+
+    return eventCount > 0 ? 1 : 0
+  }
 }
-}
+
+extension KeyboardMonitor: @unchecked Sendable {}
+
 // MARK: - C interface functions
+// kbBool kb_startKeyboardMonitoring(void);
 @MainActor
 @_cdecl("kb_startKeyboardMonitoring")
 public func kb_startKeyboardMonitoring() -> UInt8 {
-    if Thread.isMainThread {
-        print("[MACOS-KB] - on main thread, calling directly")
-        let success = KeyboardMonitor.shared.startMonitoring()
-        return success ? 1 : 0
-    } else {
-        // print("[MACOS-KB] - not on main thread, dispatching")
-        var success = false
-        let semaphore = DispatchSemaphore(value: 0)
-        
-        DispatchQueue.main.async {
-            success = KeyboardMonitor.shared.startMonitoring()
-            semaphore.signal()
-        }
-        
-        semaphore.wait()
-        return success ? 1 : 0
-    }
-}
-
-@available(macOS 15.0, *)
-@_cdecl("kb_stopKeyboardMonitoring")
-public func kb_stopKeyboardMonitoring() {
-    DispatchQueue.main.async {
-        KeyboardMonitor.shared.stopMonitoring()
-    }
-}
-
-@MainActor
-@_cdecl("kb_pollKeyboardEvent")
-public func kb_pollKeyboardEvent(_ outEvent: UnsafeMutablePointer<kbKeyEvent>) -> UInt8 {
-    let result = KeyboardMonitor.shared.pollEvent()
-
-    if result.1, let event = result.0 {
-        outEvent.pointee = event
-        return 1
-    }
-    return 0
-}
-
-@available(macOS 15.0, *)
-@_cdecl("kb_isKeyPressed")
-public func kb_isKeyPressed(_ keyCode: UInt8) -> UInt8 {
-    var pressed = false
+  if Thread.isMainThread {
+    let success = KeyboardMonitor.shared.startMonitoring()
+    return success ? 1 : 0
+  } else {
+    var success = false
     let semaphore = DispatchSemaphore(value: 0)
 
     DispatchQueue.main.async {
-        pressed = KeyboardMonitor.shared.isKeyPressed(keyCode)
-        semaphore.signal()
+      success = KeyboardMonitor.shared.startMonitoring()
+      semaphore.signal()
     }
 
     semaphore.wait()
-    return pressed ? 1 : 0
+    return success ? 1 : 0
+  }
 }
 
+// void kb_stopKeyboardMonitoring(void);
+@MainActor
+@_cdecl("kb_stopKeyboardMonitoring")
+public func kb_stopKeyboardMonitoring() {
+  KeyboardMonitor.shared.stopMonitoring()
+}
+
+// kbBool kb_pollKeyboardEventBatch(kbEventBatch *outBatch);
+@MainActor
+@_cdecl("kb_pollKeyboardEventBatch")
+public func kb_pollKeyboardEventBatch(_ outBatch: UnsafeMutablePointer<kbEventBatch>) -> UInt8 {
+  return KeyboardMonitor.shared.pollKeyboardEventBatch(outBatch)
+}

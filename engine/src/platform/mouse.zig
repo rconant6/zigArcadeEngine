@@ -113,7 +113,9 @@ pub const Mouse = struct {
     pub fn processEvents(self: *Mouse) void {
         const eventCount: usize = @intCast(self.batchData.eventCount);
 
+        std.debug.print("Mouse event count: {d}\n", .{eventCount});
         for (self.batchData.events[0..eventCount]) |cEvent| {
+            std.debug.print("Mouse event type: {}, button: {}\n", .{ cEvent.eventType, cEvent.button });
             switch (cEvent.eventType) {
                 c.M_BUTTON_PRESS => self.handleButtonPress(cEvent),
                 c.M_BUTTON_RELEASE => self.handleButtonRelease(cEvent),

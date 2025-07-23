@@ -2,7 +2,7 @@
 #define MOUSEBRIDGE_H
 
 #include <stdint.h>
-#define MAX_MOUSE_EVENTS_PER_FRAME 16
+#define MAX_MOUSE_EVENTS_PER_FRAME 8
 
 typedef unsigned long long mTime;
 typedef unsigned char mBool;
