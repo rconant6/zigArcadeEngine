@@ -5,7 +5,8 @@ const Window = plat.Window;
 const c = plat.c;
 
 const input = @import("input");
-const InputSystem = input.InputSystem;
+const InputManager = input.InputManager;
+const ActionManager = input.ActionManager;
 
 const rend = @import("renderer");
 const Colors = rend.Colors;
@@ -51,10 +52,32 @@ pub fn main() !void {
     });
     defer window.destroy();
 
-    var inputSystem = InputSystem.init(allocator, Config.WIDTH, Config.HEIGHT) catch |err| {
-        std.process.fatal("[MAIN] failed to initialize Input System: {}\n", .{err});
+    var inputManager = InputManager.init(Config.WIDTH, Config.HEIGHT) catch |err| {
+        std.process.fatal("[MAIN] failed to initialize Input Manager: {}\n", .{err});
     };
-    defer inputSystem.deinit();
+    defer inputManager.deinit();
+
+    const GameActions = enum {
+        Quit,
+    };
+    var gameActions = input.ActionManager(GameActions).init(allocator);
+    defer gameActions.deinit();
+
+    // Add quit bindings
+    try gameActions.addBinding(.{
+        .action = .Quit,
+        .source = .{ .Key = .Esc },
+    });
+
+    try gameActions.addBinding(.{
+        .action = .Quit,
+        .source = .{ .MouseButton = .Right },
+    });
+
+    try gameActions.addBinding(.{
+        .action = .Quit,
+        .source = .{ .KeyCombo = .{ .modifier = .Command, .key = .Q } },
+    });
 
     var entityManager = EntityManager.init(allocator) catch |err| {
         std.process.fatal("[MAIN] failed to initialize Entity Manager: {}\n", .{err});
@@ -142,19 +165,19 @@ pub fn main() !void {
             continue;
         }
 
-        inputSystem.pollEvents();
-        inputSystem.processEvents();
+        inputManager.pollEvents();
+        inputManager.processEvents();
 
         // temp for quitting while building
-        if (inputSystem.isInputPressed(.{ .Key = .Esc }) or inputSystem.isInputPressed(.{ .MouseButton = .Right })) running = false;
-        if (inputSystem.isInputPressed(.{ .KeyCombo = .{ .modifier = .Command, .key = .Q } })) running = false;
-        if (inputSystem.isInputPressed(.{ .MouseCombo = .{ .modifier = .Option, .button = .Left } })) running = false;
+        if (inputManager.isInputPressed(.{ .Key = .Esc }) or inputManager.isInputPressed(.{ .MouseButton = .Right })) running = false;
+        if (inputManager.isInputPressed(.{ .KeyCombo = .{ .modifier = .Command, .key = .Q } })) running = false;
+        if (inputManager.isInputPressed(.{ .MouseCombo = .{ .modifier = .Option, .button = .Left } })) running = false;
 
         renderer.beginFrame();
         entityManager.renderSystem(&renderer);
         renderer.endFrame();
 
-        inputSystem.update(dt);
+        inputManager.update(dt);
         const rawBytes: []u8 = std.mem.sliceAsBytes(renderer.frameBuffer.frontBuffer);
         window.updateWindowPixels(
             rawBytes,
