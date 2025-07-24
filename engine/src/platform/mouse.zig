@@ -6,11 +6,12 @@ const V2 = math.V2;
 pub const plat = @import("platform.zig");
 const c = plat.c;
 
-const MousePosition = V2;
 const MouseDelta = V2;
+const MousePosition = V2;
 
 const MAX_MOUSE_EVENTS_PER_FRAME: usize = 16;
 
+pub const MouseAxis = enum { PositionX, PositionY, DeltaX, DeltaY, ScrollX, ScrollY };
 pub const MouseButton = enum { Left, Right, Middle, Other1, Other2 };
 
 const ButtonState = packed struct {
@@ -113,9 +114,7 @@ pub const Mouse = struct {
     pub fn processEvents(self: *Mouse) void {
         const eventCount: usize = @intCast(self.batchData.eventCount);
 
-        std.debug.print("Mouse event count: {d}\n", .{eventCount});
         for (self.batchData.events[0..eventCount]) |cEvent| {
-            std.debug.print("Mouse event type: {}, button: {}\n", .{ cEvent.eventType, cEvent.button });
             switch (cEvent.eventType) {
                 c.M_BUTTON_PRESS => self.handleButtonPress(cEvent),
                 c.M_BUTTON_RELEASE => self.handleButtonRelease(cEvent),

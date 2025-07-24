@@ -53,11 +53,15 @@ pub fn build(b: *std.Build) void {
         },
     }
 
+    // MARK: Module Loading
     const mathModule = b.addModule("math", .{
         .root_source_file = b.path("engine/src/math/math.zig"),
     });
     const platformModule = b.addModule("platform", .{
         .root_source_file = b.path("engine/src/platform/platform.zig"),
+    });
+    const inputModule = b.addModule("input", .{
+        .root_source_file = b.path("engine/src/input/input.zig"),
     });
     const rendererModule = b.addModule("renderer", .{
         .root_source_file = b.path("engine/src/renderer/renderer.zig"),
@@ -73,6 +77,9 @@ pub fn build(b: *std.Build) void {
 
     platformModule.addImport("math", mathModule);
     engine.root_module.addImport("platform", platformModule);
+
+    inputModule.addImport("platform", platformModule);
+    engine.root_module.addImport("input", inputModule);
 
     rendererModule.addImport("math", mathModule);
     engine.root_module.addImport("renderer", rendererModule);
@@ -113,10 +120,11 @@ pub fn build(b: *std.Build) void {
     // Link engine library and add module imports
     zasteroids.linkLibrary(engine);
     zasteroids.root_module.addImport("math", mathModule);
+    zasteroids.root_module.addImport("platform", platformModule);
+    zasteroids.root_module.addImport("input", inputModule);
+    zasteroids.root_module.addImport("asset", assetModule);
     zasteroids.root_module.addImport("ecs", ecsModule);
     zasteroids.root_module.addImport("renderer", rendererModule);
-    zasteroids.root_module.addImport("platform", platformModule);
-    zasteroids.root_module.addImport("asset", assetModule);
 
     // Install targets
     const install_zasteroids = b.addInstallArtifact(zasteroids, .{});

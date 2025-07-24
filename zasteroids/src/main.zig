@@ -1,12 +1,11 @@
 const std = @import("std");
 
 const plat = @import("platform");
-const InputHandler = plat.InputHandler;
-const InputEvent = plat.InputEvent;
-const Keyboard = plat.Keyboard;
-const Mouse = plat.Mouse;
 const Window = plat.Window;
 const c = plat.c;
+
+const input = @import("input");
+const InputManager = input.InputManager;
 
 const rend = @import("renderer");
 const Colors = rend.Colors;
@@ -52,34 +51,18 @@ pub fn main() !void {
     });
     defer window.destroy();
 
-    // Initialize keyboard
-    var keyboard = Keyboard.init() catch |err| {
-        std.process.fatal(
-            "[MAIN] failed to initialize keyboard input: {}\n",
-            .{err},
-        );
+    var inputManager = InputManager.init(Config.WIDTH, Config.HEIGHT) catch |err| {
+        std.process.fatal("[MAIN] failed to initialize Input Manager: {}\n", .{err});
     };
-    defer keyboard.deinit();
-
-    // Initialize mouse
-    var mouse = Mouse.init() catch |err| {
-        std.process.fatal(
-            "[MAIN] failed to initialize mouse input: {}\n",
-            .{err},
-        );
-    };
-    mouse.setWindowDimensions(Config.WIDTH, Config.HEIGHT);
-    defer mouse.deinit();
-
-    // var inputHandler = InputHandler.init();
+    defer inputManager.deinit();
 
     var entityManager = EntityManager.init(&allocator) catch |err| {
-        std.process.fatal("[MAIN] failed to initialize entity manager: {}\n", .{err});
+        std.process.fatal("[MAIN] failed to initialize Entity Manager: {}\n", .{err});
     };
     defer entityManager.deinit();
 
     var assetManager = AssetManager.init(&allocator) catch |err| {
-        std.process.fatal("[MAIN] failed to initialize asset manager: {}\n", .{err});
+        std.process.fatal("[MAIN] failed to initialize Asset Manager: {}\n", .{err});
     };
     defer assetManager.deinit();
     assetManager.setFontPath("../../zasteroids/resources/fonts");
@@ -89,9 +72,6 @@ pub fn main() !void {
     };
     renderer.setClearColor(rend.Colors.BLACK);
     defer renderer.deinit();
-
-    // var inputManager = InputManager.init();
-    // defer inputManager.deinit();
 
     // var stateManager = GameStateManager.init();
     // defer stateManager.deinit();
@@ -161,40 +141,17 @@ pub fn main() !void {
             running = false;
             continue;
         }
-        _ = keyboard.pollEvents();
-        keyboard.processEvents();
-        if (keyboard.isKeyPressed(.Esc)) running = false;
-        if (keyboard.isCommandPressed()) {
-            std.debug.print("Command Modifier! {any}\n", .{keyboard.state.modifiers});
-        }
 
-        // const mouseEventCount = mouse.pollEvents();
-        // std.debug.print("Mouse events received: {}\n", .{mouseEventCount});
-        // mouse.processEvents();
-        _ = mouse.pollEvents();
-        mouse.processEvents();
-        // Add this right after processEvents():
-        // std.debug.print("Current mouse state - Left pressed: {}, Just pressed: {}\n", .{ mouse.state.buttonsPressed.left, mouse.state.buttonsJustPressed.left }); // _ = mouse.pollEvents();
-        // mouse.processEvents();
-        if (mouse.isButtonPressed(.Left)) {
-            std.debug.print("Left mouse button click\n", .{});
-        }
-        if (mouse.wasButtonJustPressed(.Left)) {
-            std.debug.print("Left mouse button just clicked\n", .{});
-        }
-        if (mouse.isButtonPressed(.Right)) {
-            std.debug.print("Right mouse button click\n", .{});
-        }
-        if (mouse.wasButtonJustPressed(.Right)) {
-            std.debug.print("Right mouse button just clicked\n", .{});
-        }
+        inputManager.pollEvents();
+        inputManager.processEvents();
+
+        if (inputManager.keyboard.isKeyPressed(.Esc)) running = false; // temp for quitting while building
 
         renderer.beginFrame();
         entityManager.renderSystem(&renderer);
         renderer.endFrame();
 
-        keyboard.update(dt);
-        mouse.update(dt);
+        inputManager.update(dt);
         const rawBytes: []u8 = std.mem.sliceAsBytes(renderer.frameBuffer.frontBuffer);
         window.updateWindowPixels(
             rawBytes,

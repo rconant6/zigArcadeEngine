@@ -46,13 +46,6 @@ pub const Keyboard = struct {
 
             self.state.modifiers = @bitCast(cEvent.modifiers);
 
-            std.debug.print("Raw modifier byte: 0b{b:0>8}\n", .{cEvent.modifiers});
-            std.debug.print("Parsed modifiers: shift={} ctrl={} opt={} cmd={}\n", .{
-                self.state.modifiers.shift,
-                self.state.modifiers.control,
-                self.state.modifiers.option,
-                self.state.modifiers.command,
-            });
             switch (cEvent.eventType) {
                 c.KB_KEY_PRESS => {
                     updateKeyPress(
@@ -60,13 +53,6 @@ pub const Keyboard = struct {
                         &self.state.keysJustPressed[index],
                         &self.state.keysJustReleased[index],
                     );
-                    std.debug.print("Key Pressed:{any}  Index: {d}   Pressed: {any} Just Pressed: {any}, JustReleased: {any}\n", .{
-                        mapToGameKeyCode(cEvent.code),
-                        index,
-                        self.state.keysPressed[index],
-                        self.state.keysJustPressed[index],
-                        self.state.keysJustReleased[index],
-                    });
                 },
                 c.KB_KEY_RELEASE => {
                     updateKeyRelease(
@@ -74,13 +60,6 @@ pub const Keyboard = struct {
                         &self.state.keysJustPressed[index],
                         &self.state.keysJustReleased[index],
                     );
-                    std.debug.print("Key Released:{any}  Index: {d}   Pressed: {any} Just Pressed: {any}, JustReleased: {any}\n", .{
-                        mapToGameKeyCode(cEvent.code),
-                        index,
-                        self.state.keysPressed[index],
-                        self.state.keysJustPressed[index],
-                        self.state.keysJustReleased[index],
-                    });
                 },
                 else => {},
             }
