@@ -147,7 +147,8 @@ pub fn main() !void {
 
         // temp for quitting while building
         if (inputManager.isKeyPressed(.Esc) or inputManager.isMouseButtonPressed(.Right)) running = false;
-        if (inputManager.isModifierPressed(.Command) and inputManager.isKeyPressed(.Q)) running = false;
+        if (inputManager.isInputPressed(.{ .KeyCombo = .{ .modifier = .Command, .key = .Q } })) running = false;
+        if (inputManager.isInputPressed(.{ .MouseCombo = .{ .modifier = .Option, .button = .Left } })) running = false;
 
         renderer.beginFrame();
         entityManager.renderSystem(&renderer);

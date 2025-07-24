@@ -7,6 +7,7 @@
 typedef unsigned long long mTime;
 typedef unsigned char mBool;
 typedef int32_t i32;
+typedef unsigned char u8;
 
 typedef enum {
   M_BUTTON_PRESS,
@@ -39,6 +40,7 @@ typedef struct {
   mButton button;
   mBool isPressed;
 
+  u8 modifiers;
 } mMouseEvent;
 
 typedef struct {

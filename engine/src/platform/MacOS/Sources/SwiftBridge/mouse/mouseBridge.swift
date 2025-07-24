@@ -1,7 +1,6 @@
 import CMouseBridge
 import Cocoa
 
-
 public final class MouseMonitor {
   static let shared = MouseMonitor()
 
@@ -52,13 +51,22 @@ public final class MouseMonitor {
     let deltaX: Float = (type == M_MOVE) ? Float(event.deltaX) : 0.0
     let deltaY: Float = (type == M_MOVE) ? Float(event.deltaY) : 0.0
 
+    let modifiers = event.modifierFlags
+    var compactMods: UInt8 = 0
+
+    if modifiers.contains(.shift) { compactMods |= 0x1 }
+    if modifiers.contains(.control) { compactMods |= 0x2 }
+    if modifiers.contains(.option) { compactMods |= 0x4 }
+    if modifiers.contains(.command) { compactMods |= 0x8 }
+
     return mMouseEvent(
       eventType: type, timestamp: fTimestamp,
       windowX: windowX, windowY: windowY,
       gameX: gameX, gameY: gameY,
       deltaX: deltaX, deltaY: deltaY,
       scrollDeltaX: scrollX, scrollDeltaY: scrollY,
-      button: button, isPressed: isPressed)
+      button: button, isPressed: isPressed,
+      modifiers: compactMods)
   }
 
   func startMonitoring() -> Bool {
@@ -92,7 +100,7 @@ public final class MouseMonitor {
   }
 
   func pollMouseEventBatch(_ outBatch: UnsafeMutablePointer<mMouseEventBatch>) -> UInt8 {
-let MAX_MOUSE_EVENTS_PER_FRAME: Int32 = 8
+    let MAX_MOUSE_EVENTS_PER_FRAME: Int32 = 8
     queueLock.lock()
     defer { queueLock.unlock() }
 

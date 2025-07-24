@@ -3,17 +3,9 @@ const builtin = @import("builtin");
 
 pub const plat = @import("platform.zig");
 const c = plat.c;
-
+const ModifierFlags = plat.ModifierFlags;
+const ModifierKey = plat.ModifierKey;
 const MAX_KEYS = 256;
-const ModifierFlags = packed struct {
-    shift: u1 = 0,
-    control: u1 = 0,
-    option: u1 = 0,
-    command: u1 = 0,
-    padding: u4 = 0,
-};
-
-pub const ModifierKey = enum { Shift, Control, Option, Command };
 
 pub const KeyboardState = struct {
     keysPressed: [MAX_KEYS]bool,

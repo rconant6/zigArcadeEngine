@@ -8,7 +8,6 @@ pub const c = @cImport({
 const key = @import("keyboard.zig");
 pub const Keyboard = key.Keyboard;
 pub const KeyCode = key.KeyCode;
-pub const ModifierKey = key.ModifierKey;
 
 const win = @import("window.zig");
 pub const Window = win.Window;
@@ -18,3 +17,13 @@ const mouse = @import("mouse.zig");
 pub const Mouse = mouse.Mouse;
 pub const MouseButton = mouse.MouseButton;
 pub const MouseAxis = mouse.MouseAxis;
+
+pub const ModifierFlags = packed struct {
+    shift: u1 = 0,
+    control: u1 = 0,
+    option: u1 = 0,
+    command: u1 = 0,
+    padding: u4 = 0,
+};
+
+pub const ModifierKey = enum { Shift, Control, Option, Command };

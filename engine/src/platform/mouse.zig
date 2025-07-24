@@ -5,6 +5,8 @@ const V2 = math.V2;
 
 pub const plat = @import("platform.zig");
 const c = plat.c;
+const ModifierFlags = plat.ModifierFlags;
+const ModifierKey = plat.ModifierKey;
 
 const MouseDelta = V2;
 const MousePosition = V2;
@@ -33,6 +35,8 @@ pub const MouseState = struct {
     buttonsPressed: ButtonState,
     buttonsJustPressed: ButtonState,
     buttonsJustReleased: ButtonState,
+
+    modifiers: ModifierFlags,
 
     inWindow: bool,
 
@@ -63,6 +67,9 @@ pub const Mouse = struct {
 
     fn handleButtonPress(self: *Mouse, cEvent: c.mMouseEvent) void {
         self.state.currentPosition = .{ .x = cEvent.gameX, .y = cEvent.gameY };
+
+        self.state.modifiers = @bitCast(cEvent.modifiers);
+
         switch (cEvent.button) {
             c.M_BUTTON_LEFT => updateButtonPress(&self.state.buttonsPressed.left, &self.state.buttonsJustPressed.left, &self.state.buttonsJustReleased.left),
             c.M_BUTTON_RIGHT => updateButtonPress(&self.state.buttonsPressed.right, &self.state.buttonsJustPressed.right, &self.state.buttonsJustReleased.right),
@@ -139,6 +146,27 @@ pub const Mouse = struct {
         self.state.lastPosition = self.state.currentPosition;
     }
 
+    pub fn isModifierPressed(self: *const Mouse, modKey: ModifierKey) bool {
+        return switch (modKey) {
+            .Shift => return self.state.modifiers.shift == 1,
+            .Control => return self.state.modifiers.control == 1,
+            .Option => return self.state.modifiers.option == 1,
+            .Command => return self.state.modifiers.command == 1,
+        };
+    }
+    pub fn isShiftPressed(self: *const Mouse) bool {
+        return self.state.modifiers.shift == 1;
+    }
+    pub fn isCtrlPressed(self: *const Mouse) bool {
+        return self.state.modifiers.control == 1;
+    }
+    pub fn isOptionPressed(self: *const Mouse) bool {
+        return self.state.modifiers.option == 1;
+    }
+    pub fn isCommandPressed(self: *const Mouse) bool {
+        return self.state.modifiers.command == 1;
+    }
+
     pub fn isButtonPressed(self: *const Mouse, button: MouseButton) bool {
         return switch (button) {
             .Left => self.state.buttonsPressed.left == 1,
@@ -197,6 +225,7 @@ pub const Mouse = struct {
                 .buttonsJustReleased = ButtonState{},
                 .inWindow = true,
                 .lastUpdateTime = 0,
+                .modifiers = ModifierFlags{},
             },
             .batchData = c.mMouseEventBatch{},
         };

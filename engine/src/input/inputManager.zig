@@ -34,9 +34,10 @@ pub const InputManager = struct {
     pub fn isInputPressed(self: *const InputManager, source: InputSource) bool {
         return switch (source) {
             .Key => |key| self.keyboard.isKeyPressed(key),
-            .Mouse => |btn| self.mouse.isButtonPressed(btn),
-            .Modifier => |mod| self.keyboard.isModifierPressed(mod),
-            // .Combo => |combo| self.combo.isPressed(self),
+            .MouseButton => |btn| self.mouse.isButtonPressed(btn),
+            .KeyCombo => |combo| self.keyboard.isModifierPressed(combo.modifier) and self.keyboard.wasKeyJustPressed(combo.key),
+            .MouseCombo => |combo| self.mouse.isModifierPressed(combo.modifier) and self.mouse.wasButtonJustPressed(combo.button),
+            else => @panic("not Implemented for this type of input thing!"),
         };
     }
     pub fn isKeyPressed(self: *const InputManager, key: KeyCode) bool {
