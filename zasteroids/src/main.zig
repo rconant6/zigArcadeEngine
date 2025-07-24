@@ -5,7 +5,7 @@ const Window = plat.Window;
 const c = plat.c;
 
 const input = @import("input");
-const InputManager = input.InputManager;
+const InputSystem = input.InputSystem;
 
 const rend = @import("renderer");
 const Colors = rend.Colors;
@@ -51,10 +51,10 @@ pub fn main() !void {
     });
     defer window.destroy();
 
-    var inputManager = InputManager.init(Config.WIDTH, Config.HEIGHT) catch |err| {
-        std.process.fatal("[MAIN] failed to initialize Input Manager: {}\n", .{err});
+    var inputSystem = InputSystem.init(allocator, Config.WIDTH, Config.HEIGHT) catch |err| {
+        std.process.fatal("[MAIN] failed to initialize Input System: {}\n", .{err});
     };
-    defer inputManager.deinit();
+    defer inputSystem.deinit();
 
     var entityManager = EntityManager.init(allocator) catch |err| {
         std.process.fatal("[MAIN] failed to initialize Entity Manager: {}\n", .{err});
@@ -142,19 +142,19 @@ pub fn main() !void {
             continue;
         }
 
-        inputManager.pollEvents();
-        inputManager.processEvents();
+        inputSystem.pollEvents();
+        inputSystem.processEvents();
 
         // temp for quitting while building
-        if (inputManager.isKeyPressed(.Esc) or inputManager.isMouseButtonPressed(.Right)) running = false;
-        if (inputManager.isInputPressed(.{ .KeyCombo = .{ .modifier = .Command, .key = .Q } })) running = false;
-        if (inputManager.isInputPressed(.{ .MouseCombo = .{ .modifier = .Option, .button = .Left } })) running = false;
+        if (inputSystem.isInputPressed(.{ .Key = .Esc }) or inputSystem.isInputPressed(.{ .MouseButton = .Right })) running = false;
+        if (inputSystem.isInputPressed(.{ .KeyCombo = .{ .modifier = .Command, .key = .Q } })) running = false;
+        if (inputSystem.isInputPressed(.{ .MouseCombo = .{ .modifier = .Option, .button = .Left } })) running = false;
 
         renderer.beginFrame();
         entityManager.renderSystem(&renderer);
         renderer.endFrame();
 
-        inputManager.update(dt);
+        inputSystem.update(dt);
         const rawBytes: []u8 = std.mem.sliceAsBytes(renderer.frameBuffer.frontBuffer);
         window.updateWindowPixels(
             rawBytes,
