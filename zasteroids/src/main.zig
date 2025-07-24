@@ -145,7 +145,9 @@ pub fn main() !void {
         inputManager.pollEvents();
         inputManager.processEvents();
 
-        if (inputManager.keyboard.isKeyPressed(.Esc)) running = false; // temp for quitting while building
+        // temp for quitting while building
+        if (inputManager.isKeyPressed(.Esc) or inputManager.isMouseButtonPressed(.Right)) running = false;
+        if (inputManager.isModifierPressed(.Command) and inputManager.isKeyPressed(.Q)) running = false;
 
         renderer.beginFrame();
         entityManager.renderSystem(&renderer);

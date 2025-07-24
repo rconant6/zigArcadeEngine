@@ -1,30 +1,20 @@
 const std = @import("std");
 
-const plat = @import("platform");
-const Keyboard = plat.Keyboard;
-const KeyCode = plat.KeyCode;
-const Mouse = plat.Mouse;
-const MouseAxis = plat.MouseAxis;
-const MouseButton = plat.MouseButton;
-
-pub const InputSource = union(enum) {
-    Key: KeyCode,
-    MouseButton: MouseButton,
-    MouseAxis: MouseAxis,
-    KeyCombo: struct {
-        modifier: KeyCode,
-        key: KeyCode,
-    },
-    MouseCombo: struct {
-        modifier: KeyCode,
-        button: MouseButton,
-    },
-};
+const input = @import("input.zig");
+const InputSource = input.InputSource;
+const Keyboard = input.Keyboard;
+const KeyCode = input.KeyCode;
+const ModifierKey = input.ModifierKey;
+const Mouse = input.Mouse;
+const MouseAxis = input.MouseAxis;
+const MouseButton = input.MouseButton;
+const V2 = input.V2;
 
 pub const InputManager = struct {
     mouse: Mouse,
     keyboard: Keyboard,
 
+    // MARK: Process events from hardware
     pub fn pollEvents(self: *InputManager) void {
         _ = self.mouse.pollEvents();
         _ = self.keyboard.pollEvents();
@@ -40,6 +30,51 @@ pub const InputManager = struct {
         self.keyboard.update(dt);
     }
 
+    // MARK: Raw input queries (pass-through to mouse/keyboard)
+    pub fn isInputPressed(self: *const InputManager, source: InputSource) bool {
+        return switch (source) {
+            .Key => |key| self.keyboard.isKeyPressed(key),
+            .Mouse => |btn| self.mouse.isButtonPressed(btn),
+            .Modifier => |mod| self.keyboard.isModifierPressed(mod),
+            // .Combo => |combo| self.combo.isPressed(self),
+        };
+    }
+    pub fn isKeyPressed(self: *const InputManager, key: KeyCode) bool {
+        return self.keyboard.isKeyPressed(key);
+    }
+    pub fn wasKeyJustPressed(self: *const InputManager, key: KeyCode) bool {
+        return self.keyboard.wasKeyJustPressed(key);
+    }
+    pub fn wasKeyJustReleased(self: *const InputManager, key: KeyCode) bool {
+        return self.keyboard.wasKeyJustReleased(key);
+    }
+    pub fn isModifierPressed(self: *const InputManager, modifier: ModifierKey) bool {
+        return self.keyboard.isModifierPressed(modifier);
+    }
+
+    pub fn isMouseButtonPressed(self: *const InputManager, button: MouseButton) bool {
+        return self.mouse.isButtonPressed(button);
+    }
+    pub fn wasMouseButtonJustPressed(self: *const InputManager, button: MouseButton) bool {
+        return self.mouse.wasButtonJustPressed(button);
+    }
+    pub fn wasMouseButtonJustReleased(self: *const InputManager, button: MouseButton) bool {
+        return self.mouse.wasButtonJustReleased(button);
+    }
+    pub fn getMousePosition(self: *const InputManager) V2 {
+        return self.mouse.getPosition();
+    }
+    pub fn getMouseDelta(self: *const InputManager) V2 {
+        return self.mouse.getDelta();
+    }
+    pub fn getMouseScrollDelta(self: *const InputManager) V2 {
+        return self.mouse.getScrollData();
+    }
+    pub fn isMouseInWindow(self: *const InputManager) bool {
+        return self.mouse.state.inWindow;
+    }
+
+    // MARK: setup / teardown
     pub fn init(width: i32, height: i32) !InputManager {
         const mouse = try Mouse.init();
         mouse.setWindowDimensions(width, height);

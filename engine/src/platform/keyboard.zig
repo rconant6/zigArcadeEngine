@@ -5,13 +5,15 @@ pub const plat = @import("platform.zig");
 const c = plat.c;
 
 const MAX_KEYS = 256;
-pub const ModifierFlags = packed struct {
+const ModifierFlags = packed struct {
     shift: u1 = 0,
     control: u1 = 0,
     option: u1 = 0,
     command: u1 = 0,
     padding: u4 = 0,
 };
+
+pub const ModifierKey = enum { Shift, Control, Option, Command };
 
 pub const KeyboardState = struct {
     keysPressed: [MAX_KEYS]bool,
@@ -76,6 +78,14 @@ pub const Keyboard = struct {
         return self.state.keysJustReleased[@intFromEnum(key)];
     }
 
+    pub fn isModifierPressed(self: *const Keyboard, modKey: ModifierKey) bool {
+        return switch (modKey) {
+            .Shift => return self.state.modifiers.shift == 1,
+            .Control => return self.state.modifiers.control == 1,
+            .Option => return self.state.modifiers.option == 1,
+            .Command => return self.state.modifiers.command == 1,
+        };
+    }
     pub fn isShiftPressed(self: *const Keyboard) bool {
         return self.state.modifiers.shift == 1;
     }

@@ -8,6 +8,7 @@ pub const c = @cImport({
 const key = @import("keyboard.zig");
 pub const Keyboard = key.Keyboard;
 pub const KeyCode = key.KeyCode;
+pub const ModifierKey = key.ModifierKey;
 
 const win = @import("window.zig");
 pub const Window = win.Window;
@@ -16,3 +17,4 @@ pub const WindowConfig = win.WindowConfig;
 const mouse = @import("mouse.zig");
 pub const Mouse = mouse.Mouse;
 pub const MouseButton = mouse.MouseButton;
+pub const MouseAxis = mouse.MouseAxis;
