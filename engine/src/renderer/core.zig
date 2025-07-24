@@ -45,10 +45,10 @@ pub const Renderer = struct {
     height: i32,
     fw: f32,
     fh: f32,
-    allocator: *std.mem.Allocator,
+    allocator: std.mem.Allocator,
     clearColor: Color,
 
-    pub fn init(allocator: *std.mem.Allocator, width: i32, height: i32) !Renderer {
+    pub fn init(allocator: std.mem.Allocator, width: i32, height: i32) !Renderer {
         const frameBuffer = try FrameBuffer.init(allocator, width, height);
 
         return Renderer{

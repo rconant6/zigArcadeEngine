@@ -10,11 +10,11 @@ pub const FrameBuffer = struct {
     bufferMemory: []Color,
     arena: std.heap.ArenaAllocator,
 
-    pub fn init(allocator: *std.mem.Allocator, width: i32, height: i32) !FrameBuffer {
+    pub fn init(allocator: std.mem.Allocator, width: i32, height: i32) !FrameBuffer {
         // allocate memory for both buffers
         // initialize w/ default values
         const bufSize: usize = @intCast(width * height);
-        var arena = std.heap.ArenaAllocator.init(allocator.*);
+        var arena = std.heap.ArenaAllocator.init(allocator);
 
         const bufferMemory = try arena.allocator().alloc(Color, bufSize * 2);
         const front = bufferMemory[0..bufSize];

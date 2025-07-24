@@ -233,8 +233,8 @@ fn parseCmapFormatData(
 
 fn parseGlyph(
     reader: *FontReader,
-    alloc: *std.mem.Allocator, // main engine allocator
-    talloc: *std.mem.Allocator, // temp arena
+    alloc: std.mem.Allocator, // main engine allocator
+    talloc: std.mem.Allocator, // temp arena
     header: GlyfHeader,
     unitsPerEm: u16,
 ) !FilteredGlyph {
@@ -298,9 +298,9 @@ fn parseGlyph(
 
         var absX: i32 = 0;
         var absY: i32 = 0;
-        var filteredContourEndPts = try std.ArrayList(u16).initCapacity(alloc.*, contourEndPts.len);
+        var filteredContourEndPts = try std.ArrayList(u16).initCapacity(alloc, contourEndPts.len);
         errdefer filteredContourEndPts.deinit();
-        var filteredPoints = try std.ArrayList(V2).initCapacity(alloc.*, totalPoints);
+        var filteredPoints = try std.ArrayList(V2).initCapacity(alloc, totalPoints);
         errdefer filteredPoints.deinit();
         var filteredPointCount: u16 = 0;
         var filteredIndex: usize = 0;
@@ -352,8 +352,8 @@ pub const Font = struct {
     glyphAdvanceWidths: std.ArrayList(Hmetric) = undefined, // horizontal spacing data
     glyphShapes: std.AutoHashMap(u16, FilteredGlyph) = undefined, // data for shapes of glyphs
 
-    pub fn init(alloc: *std.mem.Allocator, path: []const u8) !Font {
-        var arena = std.heap.ArenaAllocator.init(alloc.*);
+    pub fn init(alloc: std.mem.Allocator, path: []const u8) !Font {
+        var arena = std.heap.ArenaAllocator.init(alloc);
         defer arena.deinit();
 
         var tempAlloc = arena.allocator();
@@ -385,13 +385,13 @@ pub const Font = struct {
         const numberOfHMetrics = hheaTable.numberOfHMetrics;
 
         const hmtxEntry = getTable(&tableDirectory, "hmtx") orelse return error.HmtxTableNotFound;
-        var hMetrics = try std.ArrayList(Hmetric).initCapacity(alloc.*, numberOfGlyphs);
+        var hMetrics = try std.ArrayList(Hmetric).initCapacity(alloc, numberOfGlyphs);
         errdefer hMetrics.deinit();
         try parseHmetrics(&reader, &hMetrics, hmtxEntry, numberOfGlyphs, numberOfHMetrics);
 
         const cmapEntry = getTable(&tableDirectory, "cmap") orelse return error.CmapTableNotFound;
         const cmapFormat4Header = try parseCmapTable(&reader, cmapEntry);
-        var mapIndices = std.AutoHashMap(u32, u16).init(alloc.*);
+        var mapIndices = std.AutoHashMap(u32, u16).init(alloc);
         errdefer mapIndices.deinit();
         try parseCmapFormatData(&reader, &mapIndices, tempAlloc, cmapFormat4Header);
 
@@ -400,7 +400,7 @@ pub const Font = struct {
         const locaEntry = getTable(&tableDirectory, "loca") orelse return error.LocaTableNotFound;
         const offsets = try parseLocaTable(&reader, &tempAlloc, locaEntry, numberOfGlyphs);
 
-        var glyphs = std.AutoHashMap(u16, FilteredGlyph).init(alloc.*);
+        var glyphs = std.AutoHashMap(u16, FilteredGlyph).init(alloc);
         errdefer glyphs.deinit();
         for (0..numberOfGlyphs) |glyphIndex| {
             const start = offsets[glyphIndex];
@@ -411,12 +411,12 @@ pub const Font = struct {
             const header = reader.readStruct(GlyfHeader);
             reader.rewind(getBytesOfPadding(GlyfHeader));
 
-            const glyphData = try parseGlyph(&reader, alloc, &tempAlloc, header, unitsPerEm);
+            const glyphData = try parseGlyph(&reader, alloc, tempAlloc, header, unitsPerEm);
             try glyphs.put(@intCast(glyphIndex), glyphData);
         }
 
         return Font{
-            .alloc = alloc.*,
+            .alloc = alloc,
             .unitsPerEm = unitsPerEm,
             .ascender = hheaTable.ascender,
             .descender = hheaTable.descender,

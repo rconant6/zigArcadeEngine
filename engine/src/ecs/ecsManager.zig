@@ -3,7 +3,6 @@ const std = @import("std");
 const ecs = @import("ecs.zig");
 const Command = ecs.Command;
 const Entity = ecs.Entity;
-const EntityCommand = ecs.EntityCommand;
 const EntityHandle = ecs.EntityHandle;
 const ComponentTag = ecs.ComponentTag;
 const ComponentType = ecs.ComponentType;
@@ -24,15 +23,13 @@ const VelocityComp = ecs.VelocityComp;
 const VelocityCompStorage = ecs.VelocityCompStorage;
 const V2 = ecs.V2;
 
-const KeyEvent = @import("../bridge.zig").KeyEvent; // still tood from platform....
+// const KeyEvent = @import("../bridge.zig").KeyEvent; // still tood from platform....
 
 pub const EntityManager = struct {
     counter: usize,
     freeIds: std.fifo.LinearFifo(usize, .Dynamic),
     generations: std.ArrayList(u16),
     arena: std.heap.ArenaAllocator,
-
-    commandQueue: std.ArrayList(EntityCommand),
 
     // component storage
     transform: TransformCompStorage, // transform - pos, rot, scale
@@ -135,33 +132,6 @@ pub const EntityManager = struct {
             .Velocity => return self.addVelocity(entity, cType.Velocity),
         }
     }
-
-    // fn generateCommands(self: *EntityManager, inputManager: *InputManager, dt: f32) void {
-    //     var count: usize = 0;
-    //     var controllables: [5]InputWrapper = undefined;
-
-    //     for (self.player.indexToEntity.items) |entityID| {
-    //         if (self.control.entityToIndex.get(entityID)) |entity| {
-    //             const control = self.control.data.items[entity];
-    //             const rotRate = control.rotationRate orelse 0;
-    //             const thrustForce = control.thrustForce orelse 0;
-    //             if (rotRate != 0 or thrustForce != 0) {
-    //                 controllables[count] = InputWrapper{
-    //                     .entity = Entity.init(entityID, self.generations.items[entityID]),
-    //                     .rotationRate = rotRate,
-    //                     .thrustForce = thrustForce,
-    //                 };
-    //                 count += 1;
-    //             }
-    //         }
-    //     }
-
-    //     inputManager.generateCommands(
-    //         controllables[0..count],
-    //         dt,
-    //         &self.commandQueue,
-    //     );
-    // }
 
     fn processCommands(self: *EntityManager) void {
         for (self.commandQueue.items) |command| {
@@ -495,11 +465,6 @@ pub const EntityManager = struct {
         }
     }
 
-    // pub fn inputSystem(self: *EntityManager, inputManager: *InputManager, dt: f32) void {
-    //     self.generateCommands(inputManager, dt);
-    //     self.processCommands();
-    // }
-
     pub fn physicsSystem(self: *EntityManager, dt: f32) void {
         for (self.velocity.indexToEntity.items, 0..) |entityID, velocityIndex| {
             if (self.transform.entityToIndex.get(entityID)) |transformIndex| {
@@ -519,11 +484,10 @@ pub const EntityManager = struct {
     }
 
     // MARK: Memory management
-    pub fn init(alloc: *std.mem.Allocator) !EntityManager {
-        var nextList = std.fifo.LinearFifo(usize, .Dynamic).init(alloc.*);
+    pub fn init(alloc: std.mem.Allocator) !EntityManager {
+        var nextList = std.fifo.LinearFifo(usize, .Dynamic).init(alloc);
         try nextList.ensureTotalCapacity(1024);
-        const gens = std.ArrayList(u16).init(alloc.*);
-        const commandStorage = try std.ArrayList(EntityCommand).initCapacity(alloc.*, 20);
+        const gens = std.ArrayList(u16).init(alloc);
 
         const tstorage = try TransformCompStorage.init(alloc);
         const rstorage = try RenderCompStorage.init(alloc);
@@ -533,7 +497,7 @@ pub const EntityManager = struct {
 
         return .{
             .counter = 0,
-            .arena = std.heap.ArenaAllocator.init(alloc.*),
+            .arena = std.heap.ArenaAllocator.init(alloc),
             .freeIds = nextList,
             .generations = gens,
             .transform = tstorage,
@@ -541,7 +505,6 @@ pub const EntityManager = struct {
             .control = cstorage,
             .player = pstorage,
             .velocity = vstorage,
-            .commandQueue = commandStorage,
         };
     }
 
@@ -554,6 +517,5 @@ pub const EntityManager = struct {
         self.velocity.deinit();
         self.render.deinit();
         self.arena.deinit();
-        self.commandQueue.deinit();
     }
 };

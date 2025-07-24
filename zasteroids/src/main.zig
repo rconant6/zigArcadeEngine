@@ -31,7 +31,7 @@ const Config = struct {
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
-    var allocator = gpa.allocator();
+    const allocator = gpa.allocator();
 
     // MARK: External stuff that feeds the game
     // Initialize the application
@@ -56,18 +56,18 @@ pub fn main() !void {
     };
     defer inputManager.deinit();
 
-    var entityManager = EntityManager.init(&allocator) catch |err| {
+    var entityManager = EntityManager.init(allocator) catch |err| {
         std.process.fatal("[MAIN] failed to initialize Entity Manager: {}\n", .{err});
     };
     defer entityManager.deinit();
 
-    var assetManager = AssetManager.init(&allocator) catch |err| {
+    var assetManager = AssetManager.init(allocator) catch |err| {
         std.process.fatal("[MAIN] failed to initialize Asset Manager: {}\n", .{err});
     };
     defer assetManager.deinit();
     assetManager.setFontPath("../../zasteroids/resources/fonts");
 
-    var renderer = Renderer.init(&allocator, Config.WIDTH, Config.HEIGHT) catch |err| {
+    var renderer = Renderer.init(allocator, Config.WIDTH, Config.HEIGHT) catch |err| {
         std.process.fatal("[MAIN] failed to initialize renderer: {}\n", .{err});
     };
     renderer.setClearColor(rend.Colors.BLACK);

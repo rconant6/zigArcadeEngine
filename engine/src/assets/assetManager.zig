@@ -5,7 +5,7 @@ const FontManager = asset.FontManager;
 const Font = asset.Font;
 
 pub const AssetManager = struct {
-    allocator: *std.mem.Allocator,
+    allocator: std.mem.Allocator,
     fonts: std.StringHashMap(Font),
     fontPath: []const u8 = undefined,
 
@@ -14,7 +14,7 @@ pub const AssetManager = struct {
     }
 
     pub fn loadFont(self: *AssetManager, name: []const u8) !Font {
-        const fullPath = try std.fmt.allocPrint(self.allocator.*, "{s}/{s}", .{ self.fontPath, name });
+        const fullPath = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ self.fontPath, name });
         defer self.allocator.free(fullPath);
 
         std.debug.print("{s}\n", .{fullPath});
@@ -26,10 +26,10 @@ pub const AssetManager = struct {
         return font;
     }
 
-    pub fn init(alloc: *std.mem.Allocator) !AssetManager {
+    pub fn init(alloc: std.mem.Allocator) !AssetManager {
         return AssetManager{
             .allocator = alloc,
-            .fonts = std.StringHashMap(Font).init(alloc.*),
+            .fonts = std.StringHashMap(Font).init(alloc),
         };
     }
 

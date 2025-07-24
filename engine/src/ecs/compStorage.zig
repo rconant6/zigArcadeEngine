@@ -14,11 +14,11 @@ pub const VelocityCompStorage = struct {
     entityToIndex: std.AutoHashMap(usize, usize),
     indexToEntity: std.ArrayList(usize),
 
-    pub fn init(alloc: *std.mem.Allocator) !VelocityCompStorage {
+    pub fn init(alloc: std.mem.Allocator) !VelocityCompStorage {
         return .{
-            .data = std.ArrayList(VelocityComp).init(alloc.*),
-            .entityToIndex = std.AutoHashMap(usize, usize).init(alloc.*),
-            .indexToEntity = std.ArrayList(usize).init(alloc.*),
+            .data = std.ArrayList(VelocityComp).init(alloc),
+            .entityToIndex = std.AutoHashMap(usize, usize).init(alloc),
+            .indexToEntity = std.ArrayList(usize).init(alloc),
         };
     }
 
@@ -34,11 +34,11 @@ pub const PlayerCompStorage = struct {
     entityToIndex: std.AutoHashMap(usize, usize),
     indexToEntity: std.ArrayList(usize),
 
-    pub fn init(alloc: *std.mem.Allocator) !PlayerCompStorage {
+    pub fn init(alloc: std.mem.Allocator) !PlayerCompStorage {
         return .{
-            .data = std.ArrayList(PlayerComp).init(alloc.*),
-            .entityToIndex = std.AutoHashMap(usize, usize).init(alloc.*),
-            .indexToEntity = std.ArrayList(usize).init(alloc.*),
+            .data = std.ArrayList(PlayerComp).init(alloc),
+            .entityToIndex = std.AutoHashMap(usize, usize).init(alloc),
+            .indexToEntity = std.ArrayList(usize).init(alloc),
         };
     }
 
@@ -54,11 +54,11 @@ pub const ControlCompStorage = struct {
     entityToIndex: std.AutoHashMap(usize, usize),
     indexToEntity: std.ArrayList(usize),
 
-    pub fn init(alloc: *std.mem.Allocator) !ControlCompStorage {
+    pub fn init(alloc: std.mem.Allocator) !ControlCompStorage {
         return .{
-            .data = std.ArrayList(ControlComp).init(alloc.*),
-            .entityToIndex = std.AutoHashMap(usize, usize).init(alloc.*),
-            .indexToEntity = std.ArrayList(usize).init(alloc.*),
+            .data = std.ArrayList(ControlComp).init(alloc),
+            .entityToIndex = std.AutoHashMap(usize, usize).init(alloc),
+            .indexToEntity = std.ArrayList(usize).init(alloc),
         };
     }
 
@@ -74,11 +74,11 @@ pub const TransformCompStorage = struct {
     entityToIndex: std.AutoHashMap(usize, usize),
     indexToEntity: std.ArrayList(usize),
 
-    pub fn init(alloc: *std.mem.Allocator) !TransformCompStorage {
+    pub fn init(alloc: std.mem.Allocator) !TransformCompStorage {
         return .{
-            .data = std.ArrayList(TransformComp).init(alloc.*),
-            .entityToIndex = std.AutoHashMap(usize, usize).init(alloc.*),
-            .indexToEntity = std.ArrayList(usize).init(alloc.*),
+            .data = std.ArrayList(TransformComp).init(alloc),
+            .entityToIndex = std.AutoHashMap(usize, usize).init(alloc),
+            .indexToEntity = std.ArrayList(usize).init(alloc),
         };
     }
 
@@ -94,11 +94,11 @@ pub const RenderCompStorage = struct {
     entityToIndex: std.AutoHashMap(usize, usize),
     indexToEntity: std.ArrayList(usize),
 
-    pub fn init(alloc: *std.mem.Allocator) !RenderCompStorage {
+    pub fn init(alloc: std.mem.Allocator) !RenderCompStorage {
         return .{
-            .data = std.ArrayList(RenderComp).init(alloc.*),
-            .entityToIndex = std.AutoHashMap(usize, usize).init(alloc.*),
-            .indexToEntity = std.ArrayList(usize).init(alloc.*),
+            .data = std.ArrayList(RenderComp).init(alloc),
+            .entityToIndex = std.AutoHashMap(usize, usize).init(alloc),
+            .indexToEntity = std.ArrayList(usize).init(alloc),
         };
     }
 
