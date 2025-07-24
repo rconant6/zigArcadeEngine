@@ -1,5 +1,8 @@
-const inputMan = @import("inputManager.zig");
-pub const InputManager = inputMan.InputManager;
+const input = @import("inputManager.zig");
+pub const InputManager = input.InputManager;
+
+const action = @import("action.zig");
+pub const ActionManager = action.ActionManager;
 
 const plat = @import("platform");
 pub const Keyboard = plat.Keyboard;
