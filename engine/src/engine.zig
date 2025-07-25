@@ -1,15 +1,198 @@
 const std = @import("std");
-
 const math = @import("math");
-const V2 = math.V2;
-const V2I = math.V2I;
-const V2U = math.V2U;
-
 const rend = @import("renderer");
-const Color = rend.Color;
-const Renderer = rend.Renderer;
-const Polygon = rend.Polygon;
-
 const asset = @import("assets");
-
 const ecs = @import("ecs");
+const input = @import("input");
+
+pub const Engine = struct {
+    allocator: std.mem.Allocator,
+    inputManager: input.InputManager,
+    renderer: rend.Renderer,
+    entityManger: ecs.EntityManager,
+
+    pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: []const u8) Engine {
+        _ = allocator;
+        _ = width;
+        _ = height;
+        _ = title;
+    }
+
+    pub fn deinit(self: *Engine) void {
+        _ = self;
+    }
+
+    pub fn run(self: *Engine, gameLogic: anytype) !void {
+        _ = self;
+        _ = gameLogic;
+    }
+
+    // TODO: give access to engine systems
+};
+
+// // MARK: External stuff that feeds the game
+// // Initialize the application
+// const app = plat.c.wb_initApplication();
+// if (app == 0) {
+//     std.process.fatal(
+//         "[MAIN] failed to initialize native application: {}\n",
+//         .{error.FailedApplicationLaunch},
+//     );
+// }
+
+// // Create a window
+// var window = try Window.create(.{
+//     .width = Config.WIDTH,
+//     .height = Config.HEIGHT,
+//     .title = "ZASTEROIDS",
+// });
+// defer window.destroy();
+
+// var inputManager = InputManager.init(Config.WIDTH, Config.HEIGHT) catch |err| {
+//     std.process.fatal("[MAIN] failed to initialize Input Manager: {}\n", .{err});
+// };
+// defer inputManager.deinit();
+
+// const GameActions = enum {
+//     Quit,
+// };
+// var gameActions = input.ActionManager(GameActions).init(allocator);
+// defer gameActions.deinit();
+
+// // Add quit bindings
+// try gameActions.addBinding(.{
+//     .action = .Quit,
+//     .source = .{ .Key = .Esc },
+// });
+
+// try gameActions.addBinding(.{
+//     .action = .Quit,
+//     .source = .{ .MouseButton = .Right },
+// });
+
+// try gameActions.addBinding(.{
+//     .action = .Quit,
+//     .source = .{ .KeyCombo = .{ .modifier = .Command, .key = .Q } },
+// });
+
+// var entityManager = EntityManager.init(allocator) catch |err| {
+//     std.process.fatal("[MAIN] failed to initialize Entity Manager: {}\n", .{err});
+// };
+// defer entityManager.deinit();
+
+// var assetManager = AssetManager.init(allocator) catch |err| {
+//     std.process.fatal("[MAIN] failed to initialize Asset Manager: {}\n", .{err});
+// };
+// defer assetManager.deinit();
+// assetManager.setFontPath("../../zasteroids/resources/fonts");
+
+// var renderer = Renderer.init(allocator, Config.WIDTH, Config.HEIGHT) catch |err| {
+//     std.process.fatal("[MAIN] failed to initialize renderer: {}\n", .{err});
+// };
+// renderer.setClearColor(rend.Colors.BLACK);
+// defer renderer.deinit();
+
+// // var stateManager = GameStateManager.init();
+// // defer stateManager.deinit();
+
+// const fontName = "Orbitron.ttf";
+// // var font = try assetManager.loadFont("Silkscreen", "fonts/Silkscreen.ttf");
+// // var font = try assetManager.loadFont("Pixelify", "fonts/PixelifySans.ttf");
+// // var font = try assetManager.loadFont("SpaceMono", "fonts/SpaceMono.ttf"); // This one has some issues (format?)
+// // var font = try assetManager.loadFont("Arcade", "fonts/arcadeFont.ttf");
+// var font = try assetManager.loadFont(fontName);
+// std.debug.print("[MAIN] loaded {s} font\n", .{fontName});
+
+// const char = 'E';
+// if (font.charToGlyph.get(char)) |glyphIndex| {
+//     if (font.glyphShapes.get(glyphIndex)) |glyph| {
+//         const firstContourEnd = glyph.contourEnds[0];
+//         const firstContourPoints = glyph.points[0 .. firstContourEnd + 1];
+//         var points = try std.ArrayList(Point).initCapacity(allocator, firstContourPoints.len);
+//         const fontScale = 0.1;
+//         const aspectRatio = 1.78;
+//         for (firstContourPoints) |point| {
+//             const newPoint: Point =
+//                 .{
+//                     .x = (point.x * fontScale) / aspectRatio,
+//                     .y = point.y * fontScale,
+//                 };
+//             points.appendAssumeCapacity(newPoint);
+//         }
+//         const letter = try entityManager.addEntity();
+//         _ = try entityManager.addRender(letter.entity, .{ .shapeData = .{ .Polygon = .{
+//             .vertices = try points.toOwnedSlice(),
+//             .outlineColor = Colors.NEON_BLUE,
+//             .center = .{ .x = -0.352, .y = -0.465 },
+//             .fillColor = null,
+//         } }, .visible = true });
+//         _ = try entityManager.addTransform(letter.entity, .{ .transform = .{ .scale = 1.2 } });
+//     }
+// }
+
+// const ship = try entityManager.addEntityWithConfigs(
+//     .{
+//         .Triangle = .{
+//             .fillColor = rend.Colors.BLUE,
+//             .offset = .{ .x = 6, .y = 6 },
+//             .outlineColor = rend.Colors.WHITE,
+//             .scale = 5,
+//             .rotation = 0,
+//         },
+//     },
+//     .{
+//         .playerID = 0,
+//         .rotationRate = 16,
+//         .thrustForce = 5,
+//         .shotRate = 4,
+//     },
+// );
+// _ = try entityManager.addComponent(ship.entity, .{ .Velocity = .{ .velocity = V2.ZERO } });
+
+// // MARK: Main loop
+// var running = true;
+// var lastTime: i64 = std.time.microTimestamp();
+// var dt: f32 = 1.0 / 60.0;
+
+// while (running) {
+//     window.processEvents();
+//     if (window.shouldClose()) {
+//         running = false;
+//         continue;
+//     }
+
+//     inputManager.pollEvents();
+//     inputManager.processEvents();
+
+//     // temp for quitting while building
+//     if (inputManager.isInputPressed(.{ .Key = .Esc }) or inputManager.isInputPressed(.{ .MouseButton = .Right })) running = false;
+//     if (inputManager.isInputPressed(.{ .KeyCombo = .{ .modifier = .Command, .key = .Q } })) running = false;
+//     if (inputManager.isInputPressed(.{ .MouseCombo = .{ .modifier = .Option, .button = .Left } })) running = false;
+
+//     renderer.beginFrame();
+//     entityManager.renderSystem(&renderer);
+//     renderer.endFrame();
+
+//     inputManager.update(dt);
+//     const rawBytes: []u8 = std.mem.sliceAsBytes(renderer.frameBuffer.frontBuffer);
+//     window.updateWindowPixels(
+//         rawBytes,
+//         Config.WIDTH,
+//         Config.HEIGHT,
+//     );
+
+//     // Bottom of loop - timing calculation
+//     const currentTime = std.time.microTimestamp();
+//     const frameDurationUs = currentTime - lastTime;
+//     dt = @as(f32, @floatFromInt(frameDurationUs)) / 1_000_000.0; // Convert to seconds
+//     lastTime = currentTime;
+
+//     // Optional frame rate limiting
+//     const sleepTimeUs = Config.TARGET_FRAME_TIME_US - frameDurationUs;
+//     if (sleepTimeUs > 0) {
+//         // std.debug.print("sleeptime: {d}\n", .{sleepTimeUs});
+//         std.Thread.sleep(@intCast(sleepTimeUs));
+//     } else {
+//         std.debug.print("Missed frametime by: {d}\n", .{sleepTimeUs});
+//     }
+// }
