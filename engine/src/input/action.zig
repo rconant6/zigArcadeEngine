@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const input = @import("input.zig");
+const InputManager = input.InputManager;
 const InputSource = input.InputSource;
 const V2 = input.V2;
 
@@ -18,13 +19,15 @@ pub fn ActionManager(comptime ActionType: type) type {
         const Self = @This();
 
         allocator: std.mem.Allocator,
+        inputManager: *InputManager,
         bindings: std.ArrayList(ActionBinding(ActionType)),
         enable: bool,
 
         // Lifecycle
-        pub fn init(allocator: std.mem.Allocator) Self {
+        pub fn init(allocator: std.mem.Allocator, inputManger: *InputManager) Self {
             return Self{
                 .allocator = allocator,
+                .inputManager = inputManger,
                 .bindings = std.ArrayList(ActionBinding(ActionType)).init(allocator),
                 .enable = true,
             };
@@ -56,16 +59,28 @@ pub fn ActionManager(comptime ActionType: type) type {
 
         // Action queries
         pub fn isActionPressed(self: *const Self, action: ActionType) bool {
-            _ = self;
-            _ = action;
+            for (self.bindings.items) |binding| {
+                if (std.meta.eql(binding.action, action)) {
+                    return self.inputManager.isInputPressed(binding.source);
+                }
+            }
+            return false;
         }
         pub fn wasActionJustPressed(self: *const Self, action: ActionType) bool {
-            _ = self;
-            _ = action;
+            for (self.bindings.items) |binding| {
+                if (std.meta.eql(binding.action, action)) {
+                    return self.inputManager.wasInputJustPressed(binding.source);
+                }
+            }
+            return false;
         }
         pub fn wasActionJustReleased(self: *const Self, action: ActionType) bool {
-            _ = self;
-            _ = action;
+            for (self.bindings.items) |binding| {
+                if (std.meta.eql(binding.action, action)) {
+                    return self.inputManager.wasInputJustPressed(binding.source);
+                }
+            }
+            return false;
         }
         pub fn getActionValue(self: *const Self, action: ActionType) f32 {
             _ = self;

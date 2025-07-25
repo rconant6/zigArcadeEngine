@@ -1,97 +1,177 @@
 const std = @import("std");
-const math = @import("math");
-const rend = @import("renderer");
-const asset = @import("assets");
-const ecs = @import("ecs");
-const input = @import("input");
+
+pub const math = @import("math");
+
+pub const rend = @import("renderer");
+pub const Renderer = rend.Renderer;
+
+pub const asset = @import("assets");
+
+pub const ecs = @import("ecs");
+pub const EntityManager = ecs.EntityManager;
+
+pub const input = @import("input");
+pub const InputManager = input.InputManager;
+pub const ActionManager = input.ActionManager;
+
+pub const plat = @import("platform");
+const Window = plat.Window;
+
+pub const EngineConfig = struct {
+    width: i32,
+    height: i32,
+    title: [:0]const u8,
+    targetFps: f32,
+
+    const TARGET_FPS: f32 = 60.0;
+    const WIDTH: i32 = 1600;
+    const HEIGHT: i32 = 900;
+    const NAME: [:0]const u8 = "PLACEHOLDER";
+
+    pub fn toEngineConfig() EngineConfig {
+        return EngineConfig{
+            .width = WIDTH,
+            .height = HEIGHT,
+            .title = NAME,
+            .targetFps = TARGET_FPS,
+        };
+    }
+    pub fn toEngineNamedConfig(title: [:0]const u8) EngineConfig {
+        return EngineConfig{
+            .width = WIDTH,
+            .height = HEIGHT,
+            .title = title,
+            .targetFps = TARGET_FPS,
+        };
+    }
+};
 
 pub const Engine = struct {
     allocator: std.mem.Allocator,
-    inputManager: input.InputManager,
+    window: plat.Window,
+    running: bool,
+    config: EngineConfig,
+    inputManager: *input.InputManager,
     renderer: rend.Renderer,
-    entityManger: ecs.EntityManager,
+    entityManager: ecs.EntityManager,
 
-    pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: []const u8) Engine {
-        _ = allocator;
-        _ = width;
-        _ = height;
-        _ = title;
+    pub fn init(allocator: std.mem.Allocator, config: EngineConfig) !Engine {
+        const app = plat.c.wb_initApplication();
+        if (app == 0) {
+            std.process.fatal(
+                "[ENGINE] failed to initialize native application: {}\n",
+                .{error.FailedApplicationLaunch},
+            );
+        }
+
+        const window = try Window.create(.{
+            .width = @floatFromInt(config.width),
+            .height = @floatFromInt(config.height),
+            .title = config.title,
+        });
+
+        const inputManager = try allocator.create(InputManager);
+        inputManager.* = InputManager.init(config.width, config.height) catch |err| {
+            std.log.err("[ENGINE] failed to initialize Input Manager: {}\n", .{err});
+            return err;
+        };
+
+        const entityManager = EntityManager.init(allocator) catch |err| {
+            std.log.err("[ENGINE] failed to initialize Entity Manager: {}\n", .{err});
+            return err;
+        };
+
+        var renderer = Renderer.init(allocator, config.width, config.height) catch |err| {
+            std.log.err("[ENGINE] failed to initialize renderer: {}\n", .{err});
+            return err;
+        };
+        renderer.setClearColor(rend.Colors.BLACK);
+
+        return Engine{
+            .allocator = allocator,
+            .renderer = renderer,
+            .inputManager = inputManager,
+            .entityManager = entityManager,
+            .window = window,
+            .config = config,
+            .running = true,
+        };
     }
 
     pub fn deinit(self: *Engine) void {
-        _ = self;
+        self.allocator.destroy(self.inputManager);
+        self.entityManager.deinit();
+        self.renderer.deinit();
+        self.window.destroy();
     }
 
-    pub fn run(self: *Engine, gameLogic: anytype) !void {
-        _ = self;
-        _ = gameLogic;
+    pub fn createActionManager(self: *Engine, comptime ActionType: type, allocator: std.mem.Allocator) ActionManager(ActionType) {
+        return ActionManager(ActionType).init(allocator, self.inputManager);
     }
 
-    // TODO: give access to engine systems
+    pub fn stopRunning(self: *Engine) void {
+        self.running = false;
+    }
+
+    pub fn run(self: *Engine, game: anytype) !void {
+        // var lastTime: i64 = std.time.microTimestamp();
+        const dt: f32 = 1.0 / 60.0;
+        var inputManager = self.inputManager;
+
+        while (self.running) {
+            self.window.processEvents();
+            if (self.window.shouldClose()) {
+                self.running = false;
+                continue;
+            }
+
+            inputManager.pollEvents();
+            inputManager.processEvents();
+            if (inputManager.isKeyPressed(.Esc)) {
+                self.running = false;
+            }
+            // **** THIS IS THE INTERFACE BACK TO THE GAME **** //
+            game.update(self, dt);
+            // **** THIS IS THE INTERFACE BACK TO THE GAME **** //
+            inputManager.update(dt);
+
+            self.renderer.beginFrame();
+            self.entityManager.renderSystem(&self.renderer);
+            self.renderer.endFrame();
+
+            const rawBytes: []u8 = std.mem.sliceAsBytes(self.renderer.frameBuffer.frontBuffer);
+            self.window.updateWindowPixels(
+                rawBytes,
+                @intCast(self.config.width),
+                @intCast(self.config.height),
+            );
+
+            // Bottom of loop - timing calculation
+            //     const currentTime = std.time.microTimestamp();
+            //     const frameDurationUs = currentTime - lastTime;
+            //     dt = @as(f32, @floatFromInt(frameDurationUs)) / 1_000_000.0; // Convert to seconds
+            //     lastTime = currentTime;
+
+            //     // Optional frame rate limiting
+            //     const sleepTimeUs = Config.TARGET_FRAME_TIME_US - frameDurationUs;
+            //     if (sleepTimeUs > 0) {
+            //         std.debug.print("sleeptime: {d}\n", .{sleepTimeUs});
+            //         std.Thread.sleep(@intCast(sleepTimeUs));
+            //     } else {
+            //         std.debug.print("Missed frametime by: {d}\n", .{sleepTimeUs});
+            //     }
+            // }
+        }
+    }
 };
 
 // // MARK: External stuff that feeds the game
-// // Initialize the application
-// const app = plat.c.wb_initApplication();
-// if (app == 0) {
-//     std.process.fatal(
-//         "[MAIN] failed to initialize native application: {}\n",
-//         .{error.FailedApplicationLaunch},
-//     );
-// }
-
-// // Create a window
-// var window = try Window.create(.{
-//     .width = Config.WIDTH,
-//     .height = Config.HEIGHT,
-//     .title = "ZASTEROIDS",
-// });
-// defer window.destroy();
-
-// var inputManager = InputManager.init(Config.WIDTH, Config.HEIGHT) catch |err| {
-//     std.process.fatal("[MAIN] failed to initialize Input Manager: {}\n", .{err});
-// };
-// defer inputManager.deinit();
-
-// const GameActions = enum {
-//     Quit,
-// };
-// var gameActions = input.ActionManager(GameActions).init(allocator);
-// defer gameActions.deinit();
-
-// // Add quit bindings
-// try gameActions.addBinding(.{
-//     .action = .Quit,
-//     .source = .{ .Key = .Esc },
-// });
-
-// try gameActions.addBinding(.{
-//     .action = .Quit,
-//     .source = .{ .MouseButton = .Right },
-// });
-
-// try gameActions.addBinding(.{
-//     .action = .Quit,
-//     .source = .{ .KeyCombo = .{ .modifier = .Command, .key = .Q } },
-// });
-
-// var entityManager = EntityManager.init(allocator) catch |err| {
-//     std.process.fatal("[MAIN] failed to initialize Entity Manager: {}\n", .{err});
-// };
-// defer entityManager.deinit();
-
 // var assetManager = AssetManager.init(allocator) catch |err| {
 //     std.process.fatal("[MAIN] failed to initialize Asset Manager: {}\n", .{err});
 // };
 // defer assetManager.deinit();
 // assetManager.setFontPath("../../zasteroids/resources/fonts");
-
-// var renderer = Renderer.init(allocator, Config.WIDTH, Config.HEIGHT) catch |err| {
-//     std.process.fatal("[MAIN] failed to initialize renderer: {}\n", .{err});
-// };
-// renderer.setClearColor(rend.Colors.BLACK);
-// defer renderer.deinit();
-
+//
 // // var stateManager = GameStateManager.init();
 // // defer stateManager.deinit();
 
@@ -148,51 +228,3 @@ pub const Engine = struct {
 //     },
 // );
 // _ = try entityManager.addComponent(ship.entity, .{ .Velocity = .{ .velocity = V2.ZERO } });
-
-// // MARK: Main loop
-// var running = true;
-// var lastTime: i64 = std.time.microTimestamp();
-// var dt: f32 = 1.0 / 60.0;
-
-// while (running) {
-//     window.processEvents();
-//     if (window.shouldClose()) {
-//         running = false;
-//         continue;
-//     }
-
-//     inputManager.pollEvents();
-//     inputManager.processEvents();
-
-//     // temp for quitting while building
-//     if (inputManager.isInputPressed(.{ .Key = .Esc }) or inputManager.isInputPressed(.{ .MouseButton = .Right })) running = false;
-//     if (inputManager.isInputPressed(.{ .KeyCombo = .{ .modifier = .Command, .key = .Q } })) running = false;
-//     if (inputManager.isInputPressed(.{ .MouseCombo = .{ .modifier = .Option, .button = .Left } })) running = false;
-
-//     renderer.beginFrame();
-//     entityManager.renderSystem(&renderer);
-//     renderer.endFrame();
-
-//     inputManager.update(dt);
-//     const rawBytes: []u8 = std.mem.sliceAsBytes(renderer.frameBuffer.frontBuffer);
-//     window.updateWindowPixels(
-//         rawBytes,
-//         Config.WIDTH,
-//         Config.HEIGHT,
-//     );
-
-//     // Bottom of loop - timing calculation
-//     const currentTime = std.time.microTimestamp();
-//     const frameDurationUs = currentTime - lastTime;
-//     dt = @as(f32, @floatFromInt(frameDurationUs)) / 1_000_000.0; // Convert to seconds
-//     lastTime = currentTime;
-
-//     // Optional frame rate limiting
-//     const sleepTimeUs = Config.TARGET_FRAME_TIME_US - frameDurationUs;
-//     if (sleepTimeUs > 0) {
-//         // std.debug.print("sleeptime: {d}\n", .{sleepTimeUs});
-//         std.Thread.sleep(@intCast(sleepTimeUs));
-//     } else {
-//         std.debug.print("Missed frametime by: {d}\n", .{sleepTimeUs});
-//     }
-// }

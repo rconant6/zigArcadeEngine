@@ -35,33 +35,49 @@ pub const InputManager = struct {
         return switch (source) {
             .Key => |key| self.keyboard.isKeyPressed(key),
             .MouseButton => |btn| self.mouse.isButtonPressed(btn),
-            .KeyCombo => |combo| self.keyboard.isModifierPressed(combo.modifier) and self.keyboard.wasKeyJustPressed(combo.key),
-            .MouseCombo => |combo| self.mouse.isModifierPressed(combo.modifier) and self.mouse.wasButtonJustPressed(combo.button),
+            .KeyCombo => |combo| self.keyboard.isModifierPressed(combo.modifier) and self.keyboard.isKeyPressed(combo.key),
+            .MouseCombo => |combo| self.mouse.isModifierPressed(combo.modifier) and self.mouse.isButtonPressed(combo.button),
             else => @panic("not Implemented for this type of input thing!"),
         };
     }
     pub fn isKeyPressed(self: *const InputManager, key: KeyCode) bool {
         return self.keyboard.isKeyPressed(key);
     }
-    pub fn wasKeyJustPressed(self: *const InputManager, key: KeyCode) bool {
-        return self.keyboard.wasKeyJustPressed(key);
-    }
-    pub fn wasKeyJustReleased(self: *const InputManager, key: KeyCode) bool {
-        return self.keyboard.wasKeyJustReleased(key);
+    pub fn isMouseButtonPressed(self: *const InputManager, button: MouseButton) bool {
+        return self.mouse.isButtonPressed(button);
     }
     pub fn isModifierPressed(self: *const InputManager, modifier: ModifierKey) bool {
         return self.keyboard.isModifierPressed(modifier);
     }
 
-    pub fn isMouseButtonPressed(self: *const InputManager, button: MouseButton) bool {
-        return self.mouse.isButtonPressed(button);
+    pub fn wasInputJustPressed(self: *const InputManager, source: InputSource) bool {
+        return switch (source) {
+            .Key => |key| self.keyboard.wasKeyJustPressed(key),
+            .MouseButton => |button| self.mouse.wasButtonJustPressed(button),
+            else => false,
+        };
+    }
+    pub fn wasKeyJustPressed(self: *const InputManager, key: KeyCode) bool {
+        return self.keyboard.wasKeyJustPressed(key);
     }
     pub fn wasMouseButtonJustPressed(self: *const InputManager, button: MouseButton) bool {
         return self.mouse.wasButtonJustPressed(button);
     }
+
+    pub fn wasInputJustReleased(self: *const InputManager, source: InputSource) bool {
+        return switch (source) {
+            .Key => |key| self.keyboard.wasKeyJustReleased(key),
+            .MouseButton => |button| self.mouse.wasButtonJustReleased(button),
+            else => false,
+        };
+    }
+    pub fn wasKeyJustReleased(self: *const InputManager, key: KeyCode) bool {
+        return self.keyboard.wasKeyJustReleased(key);
+    }
     pub fn wasMouseButtonJustReleased(self: *const InputManager, button: MouseButton) bool {
         return self.mouse.wasButtonJustReleased(button);
     }
+
     pub fn getMousePosition(self: *const InputManager) V2 {
         return self.mouse.getPosition();
     }
@@ -71,6 +87,7 @@ pub const InputManager = struct {
     pub fn getMouseScrollDelta(self: *const InputManager) V2 {
         return self.mouse.getScrollData();
     }
+
     pub fn isMouseInWindow(self: *const InputManager) bool {
         return self.mouse.state.inWindow;
     }
